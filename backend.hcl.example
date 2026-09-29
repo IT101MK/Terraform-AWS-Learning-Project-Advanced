@@ -1,0 +1,20 @@
+# backend.hcl.example
+#
+# HOW TO USE THIS FILE (PowerShell):
+#   Copy-Item backend.hcl.example backend.hcl
+# ...then edit backend.hcl and fill in YOUR state bucket name (the output
+# of "terraform output state_bucket_name" from the bootstrap/ config).
+# backend.hcl is gitignored - it's specific to your AWS account, not
+# something to commit.
+#
+# Then initialize with:
+#   terraform init -backend-config=backend.hcl
+
+bucket = "tf-advanced-tfstate-xxxxxxxx" # <-- CHANGE ME (from bootstrap output)
+key    = "project-iac-advanced/terraform.tfstate"
+region = "us-east-1"
+
+# Turns on Terraform's native S3 state locking (conditional-write lockfile,
+# Terraform >= 1.10 - see versions.tf). No DynamoDB table required, unlike
+# the classic locking pattern bootstrap/main.tf demonstrates for reference.
+use_lockfile = true

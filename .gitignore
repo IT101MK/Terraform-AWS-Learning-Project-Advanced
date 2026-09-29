@@ -1,0 +1,61 @@
+# Terraform state files - contain EVERYTHING about your infrastructure,
+# often including sensitive values. Never commit these.
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# The .terraform directory holds downloaded provider binaries and other
+# working files. It's large and machine-specific - always regenerate it
+# with "terraform init".
+.terraform/
+
+# Your personal variable values (home IP, key names, the AD demo's admin
+# password). The .example file IS committed; your real tfvars is not. The
+# second pattern un-ignores the example templates (this project has more
+# than one, in ad-demo/ too).
+*.tfvars
+*.tfvars.json
+!terraform.tfvars.example
+
+# Private keys - never, ever commit these.
+*.pem
+*.ppk
+
+# Terraform crash logs and plan files
+crash.log
+crash.*.log
+*.tfplan
+
+# CLI config overrides
+.terraformrc
+terraform.rc
+
+# Stray override files some editors/tools generate.
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Filled-in backend config (contains your real state bucket name). The
+# .example templates are what's committed - this project has one at the
+# root and another in ad-demo/.
+backend.hcl
+
+# Local scratch space for anything pulled down from the monitoring/SSM
+# side of this project (e.g. exported CloudWatch data, Get-FleetHealth.ps1
+# reports, session logs).
+reports/
+
+# Ansible retry files.
+*.retry
+
+# Raw, UNREDACTED console/browser screenshots (account ID, public IPs,
+# bookmarks). Only the redacted copies in guide-assets/screenshots-clean/
+# are committed.
+/Screenshot*.png
+raw-screenshots/
+
+# Local helper scripts used to redact screenshots and build a preview page -
+# they contain local machine paths and the real values being redacted.
+guide-assets/*.py
+guide-assets/preview.html

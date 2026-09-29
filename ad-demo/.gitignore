@@ -1,0 +1,18 @@
+# Local Terraform working files - never commit these.
+.terraform/
+.terraform.tfstate.lock.info
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+crash.*.log
+
+# Account-specific / secret - copy from the .example versions instead.
+backend.hcl
+terraform.tfvars
+*.tfvars.json
+
+# Stray override files some editors/tools generate.
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

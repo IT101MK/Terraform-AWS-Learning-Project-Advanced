@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terraform + AWS Advanced — Getting Started Guide</title>
+<style>
+  :root {
+    --ink: #1a2332;
+    --muted: #5b6b7f;
+    --line: #dde4ec;
+    --bg: #f6f8fb;
+    --card: #ffffff;
+    --accent: #6b46c1;      /* terraform purple */
+    --accent-soft: #ede9fe;
+    --aws: #d97706;         /* aws orange */
+    --aws-soft: #fef3e2;
+    --ok: #15803d;
+    --ok-soft: #e8f5ec;
+    --warn: #b45309;
+    --warn-soft: #fef6e7;
+    --danger: #b91c1c;
+    --danger-soft: #fdecec;
+    --code-bg: #1e2430;
+    --code-ink: #d8e0ec;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink); background: var(--bg);
+    line-height: 1.6; font-size: 16px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #2d1b69 0%, #6b46c1 60%, #8b5cf6 100%);
+    color: #fff; border-radius: 14px; padding: 36px 32px; margin-bottom: 28px;
+  }
+  header.hero h1 { margin: 0 0 8px; font-size: 1.9rem; letter-spacing: -0.02em; }
+  header.hero p { margin: 0; opacity: 0.9; max-width: 46em; }
+  .hero-badges { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px; padding: 3px 12px; font-size: 0.8rem;
+  }
+
+  h2 {
+    font-size: 1.35rem; margin: 44px 0 6px; letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .hnum {
+    background: var(--accent); color: #fff; border-radius: 8px;
+    width: 32px; height: 32px; display: inline-flex; align-items: center;
+    justify-content: center; font-size: 1rem; flex: 0 0 auto;
+  }
+  .h-sub { color: var(--muted); margin: 0 0 18px 42px; font-size: 0.95rem; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px 24px; margin: 14px 0;
+  }
+
+  /* step cards */
+  .step { display: flex; gap: 16px; }
+  .step .snum {
+    flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent); font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px;
+  }
+  .step .sbody { flex: 1; min-width: 0; }
+  .step h3 { margin: 4px 0 6px; font-size: 1.05rem; }
+  .step p { margin: 6px 0; }
+
+  pre {
+    background: var(--code-bg); color: var(--code-ink);
+    border-radius: 8px; padding: 12px 16px; overflow-x: auto;
+    font-size: 0.85rem; line-height: 1.55; margin: 10px 0;
+  }
+  code { font-family: Consolas, "Cascadia Code", monospace; }
+  p code, li code, td code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 5px; font-size: 0.85em;
+  }
+  pre .cmt { color: #7b8aa0; }
+  pre .hl { color: #a5f3c4; }
+
+  .callout {
+    border-radius: 10px; padding: 14px 18px; margin: 14px 0;
+    border-left: 4px solid; font-size: 0.95rem;
+  }
+  .callout strong:first-child { display: block; margin-bottom: 4px; }
+  .callout.info  { background: var(--accent-soft); border-color: var(--accent); }
+  .callout.tip   { background: var(--ok-soft); border-color: var(--ok); }
+  .callout.warn  { background: var(--warn-soft); border-color: var(--warn); }
+  .callout.danger{ background: var(--danger-soft); border-color: var(--danger); }
+
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--bg); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .tablewrap { overflow-x: auto; }
+
+  .checklist { list-style: none; padding: 0; margin: 0; }
+  .checklist li {
+    padding: 10px 0 10px 36px; position: relative; border-bottom: 1px dashed var(--line);
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist li::before {
+    content: ""; position: absolute; left: 6px; top: 17px;
+    width: 8px; height: 8px; border-radius: 2px;
+    background: var(--accent);
+  }
+
+  figure { margin: 18px 0; text-align: center; }
+  figure svg { max-width: 100%; height: auto; }
+  figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); }
+  figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
+
+  .toc { columns: 2; column-gap: 32px; padding-left: 20px; margin: 8px 0; }
+  .toc li { margin: 4px 0; break-inside: avoid; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  a { color: var(--accent); }
+
+  footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0.85rem; }
+
+  @media (max-width: 640px) {
+    .toc { columns: 1; }
+    header.hero { padding: 26px 20px; }
+    .card { padding: 16px; }
+  }
+  @media print {
+    body { background: #fff; font-size: 12px; }
+    .wrap { max-width: none; padding: 0; }
+    .card, .callout, .step, figure, pre { break-inside: avoid; }
+    header.hero { border-radius: 0; }
+    a { color: inherit; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>Terraform + AWS Advanced — Getting Started Guide</h1>
+  <p>The staged build for a multi-host fleet: Terraform modules, SSM-based access, CloudWatch monitoring, Ansible configuration management, an S3 telemetry pipeline, and a brief, isolated Active Directory demo. Companion to the base Project-IaC guide — this one assumes you've already built that once.</p>
+  <div class="hero-badges">
+    <span class="badge">Project-IaC-Advanced</span>
+    <span class="badge">Multi-host fleet + SSM + Ansible</span>
+    <span class="badge">~2-3 hrs first time (stages 0-4)</span>
+  </div>
+</header>
+
+<nav class="card">
+  <strong>Contents</strong>
+  <ol class="toc">
+    <li><a href="#what">What you're building</a></li>
+    <li><a href="#arch">Architecture diagram</a></li>
+    <li><a href="#prereq">Prerequisites</a></li>
+    <li><a href="#cost">Cost guardrails — read first</a></li>
+    <li><a href="#stage0">Stage 0: remote state bootstrap</a></li>
+    <li><a href="#stage1">Stage 1: multi-host fleet + module</a></li>
+    <li><a href="#stage2">Stage 2: SSM + CloudWatch monitoring</a></li>
+    <li><a href="#stage3">Stage 3: Ansible configuration management</a></li>
+    <li><a href="#stage4">Stage 4: S3 telemetry pipeline</a></li>
+    <li><a href="#health">Get-FleetHealth.ps1</a></li>
+    <li><a href="#addemo">Optional: ad-demo (read the warning)</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+    <li><a href="#destroy">Destroy when done — every session</a></li>
+    <li><a href="#files">What each file does</a></li>
+    <li><a href="#next">What to learn next</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="what"><span class="hnum">1</span> What you're building</h2>
+<p class="h-sub">A small fleet, not a single server — the difference between "a Terraform apply" and "operating infrastructure."</p>
+
+<div class="card">
+  <div class="callout danger">
+    <strong>Lab / learning project only — not production-ready.</strong>
+    Everything here is built for short-lived lab testing in a personal AWS account and destroyed at the end of each session. The hosts sit in a public subnet and serve a demo page over <strong>plain HTTP (port 80, no TLS) to the whole internet</strong>; one IAM role is shared across the fleet; the data bucket uses <code>force_destroy</code>. These are deliberate simplifications for learning and cost, not safe defaults. Review and harden anything before reusing it — see <a href="#next">What to learn next</a>.
+  </div>
+  <p>This project is the advanced companion to the base Project-IaC build. Instead of one EC2 instance, it provisions a <strong>fleet</strong> of <code>host_count</code> identical hosts through a reusable Terraform <strong>module</strong> (a self-contained group of resources you call once per host with different inputs, instead of copy-pasting the same block <code>host_count</code> times), monitors them with CloudWatch, manages them with Ansible over SSM (no SSH keys anywhere), and ships a small telemetry payload from each host into a lifecycle-managed S3 bucket — deliberately modelled on capturing readings from remote assets and centralising them into one data store. A separate, isolated component briefly stands up a real AWS Managed Microsoft AD directory for a portfolio screenshot.</p>
+
+  <div class="callout info">
+    <strong>Two terms this guide uses constantly: state and backend.</strong>
+    Terraform's <strong>state</strong> is the file it uses to record what it has already created, so the next <code>plan</code>/<code>apply</code> knows what's already there instead of starting from scratch. A <strong>backend</strong> is just where that state file is stored — on your own disk by default, or somewhere shared (like the S3 bucket <code>bootstrap/</code> creates in Stage 0) so state isn't stranded on one machine. Both terms come up repeatedly from here on.
+  </div>
+
+  <div class="tablewrap">
+  <table>
+    <tr><th>Resource</th><th>What it's for</th></tr>
+    <tr><td>S3 state bucket + reference DynamoDB lock table</td><td>Remote Terraform backend, created once by <code>bootstrap/</code></td></tr>
+    <tr><td>VPC <code>10.0.0.0/16</code> + public subnet</td><td>No NAT Gateway — deliberate cost avoidance, same as the base project</td></tr>
+    <tr><td>Security group</td><td>HTTP 80 open to anywhere (<strong>lab demo only</strong> — plain HTTP, no TLS); SSH 22 closed unless you explicitly set <code>ssh_allowed_cidr</code></td></tr>
+    <tr><td><code>host_count</code> EC2 hosts (default 2, 1-5)</td><td>Amazon Linux 2023 fleet, provisioned via <code>modules/host/</code></td></tr>
+    <tr><td>Shared IAM role + instance profile</td><td>S3 read/write on one bucket, plus SSM Session Manager — no stored keys</td></tr>
+    <tr><td>Private S3 data bucket, <code>telemetry/</code> prefix</td><td>The "centralised data library" the fleet reports into, 30-day lifecycle rule</td></tr>
+    <tr><td>CloudWatch alarms + fleet dashboard</td><td>Status-check and CPU alarms per host, one dashboard for the whole fleet</td></tr>
+    <tr><td>Ansible playbook (<code>baseline</code> + <code>telemetry</code> tags)</td><td>Patching, nginx, light hardening, and the scheduled S3 upload — all over SSM</td></tr>
+    <tr><td><code>Get-FleetHealth.ps1</code></td><td>Local PowerShell fleet health report — runs on your PC, not the instances</td></tr>
+    <tr><td>AWS Managed Microsoft AD (own VPC <code>10.99.0.0/16</code>)</td><td>Isolated, optional — a portfolio screenshot only, not part of the running architecture</td></tr>
+  </table>
+  </div>
+
+  <div class="callout info">
+    <strong>Note: this account is on AWS's credit-based Free Plan, not the classic 750-hour pool.</strong>
+    Running several hosts at once burns credit roughly in proportion to <code>host_count</code> — "free-tier eligible" doesn't mean free when you multiply it. See the cost guardrails section before raising any defaults.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="arch"><span class="hnum">2</span> Architecture diagram</h2>
+<p class="h-sub">Every box maps to a resource in a <code>.tf</code> file or an Ansible task. The dashed green line is the important departure from the base project: management traffic never needs an open port 22.</p>
+
+<div class="card">
+<figure>
+<svg viewBox="0 0 900 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram: a VPC containing a public subnet with a fan-out of EC2 hosts, connected through a shared IAM role to an S3 bucket and CloudWatch; an Ansible control node reaches the hosts over SSM Session Manager with no inbound port 22 by default; a separate, isolated ad-demo component sits outside the main architecture with no connection to it">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5b6b7f"/>
+    </marker>
+    <marker id="arrowP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b46c1"/>
+    </marker>
+    <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#15803d"/>
+    </marker>
+  </defs>
+
+  <!-- Ansible control node -->
+  <rect x="15" y="255" width="150" height="110" rx="10" fill="#eef2f7" stroke="#5b6b7f" stroke-width="1.5"/>
+  <text x="90" y="292" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2332">Ansible control</text>
+  <text x="90" y="308" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2332">node</text>
+  <text x="90" y="328" text-anchor="middle" font-size="10" fill="#5b6b7f">WSL / Linux / macOS</text>
+  <text x="90" y="342" text-anchor="middle" font-size="10" fill="#5b6b7f">playbook.yml, aws ssm</text>
+  <text x="90" y="355" text-anchor="middle" font-size="10" fill="#5b6b7f">start-session</text>
+
+  <!-- AWS Cloud outer -->
+  <rect x="185" y="20" width="690" height="500" rx="14" fill="#fffdf8" stroke="#d97706" stroke-width="2"/>
+  <text x="205" y="45" font-size="14" font-weight="700" fill="#d97706">AWS Cloud — region us-east-1 (var.aws_region)</text>
+
+  <!-- VPC -->
+  <rect x="205" y="60" width="430" height="440" rx="12" fill="#f5f2fc" stroke="#6b46c1" stroke-width="2"/>
+  <text x="222" y="86" font-size="13" font-weight="700" fill="#6b46c1">VPC 10.0.0.0/16</text>
+  <text x="222" y="102" font-size="11" fill="#5b6b7f">network.tf — no NAT Gateway</text>
+
+  <!-- IGW -->
+  <rect x="170" y="240" width="70" height="60" rx="8" fill="#fff" stroke="#d97706" stroke-width="2"/>
+  <text x="205" y="264" text-anchor="middle" font-size="10" font-weight="700" fill="#1a2332">Internet</text>
+  <text x="205" y="278" text-anchor="middle" font-size="10" font-weight="700" fill="#1a2332">Gateway</text>
+  <text x="205" y="291" text-anchor="middle" font-size="9" fill="#5b6b7f">outbound only</text>
+
+  <!-- Public subnet -->
+  <rect x="265" y="95" width="345" height="385" rx="10" fill="#eafaf0" stroke="#15803d" stroke-width="1.8" stroke-dasharray="6 4"/>
+  <text x="280" y="118" font-size="12" font-weight="700" fill="#15803d">Public subnet 10.0.1.0/24</text>
+  <text x="280" y="133" font-size="10" fill="#5b6b7f">route table: 0.0.0.0/0 to IGW</text>
+
+  <!-- Security group ring -->
+  <rect x="283" y="160" width="310" height="185" rx="10" fill="none" stroke="#b91c1c" stroke-width="1.5" stroke-dasharray="3 4"/>
+  <text x="298" y="178" font-size="10" font-weight="700" fill="#b91c1c">security group (network.tf)</text>
+  <text x="298" y="191" font-size="9" fill="#b91c1c">HTTP 80: anywhere — SSH 22: closed unless ssh_allowed_cidr set</text>
+
+  <!-- Host boxes -->
+  <rect x="298" y="205" width="88" height="100" rx="8" fill="#fff" stroke="#d97706" stroke-width="2"/>
+  <text x="342" y="240" text-anchor="middle" font-size="12" font-weight="700" fill="#1a2332">Host 01</text>
+  <text x="342" y="256" text-anchor="middle" font-size="9" fill="#5b6b7f">EC2 t3.micro</text>
+  <text x="342" y="269" text-anchor="middle" font-size="9" fill="#5b6b7f">modules/host</text>
+
+  <rect x="396" y="205" width="88" height="100" rx="8" fill="#fff" stroke="#d97706" stroke-width="2"/>
+  <text x="440" y="240" text-anchor="middle" font-size="12" font-weight="700" fill="#1a2332">Host 02</text>
+  <text x="440" y="256" text-anchor="middle" font-size="9" fill="#5b6b7f">EC2 t3.micro</text>
+  <text x="440" y="269" text-anchor="middle" font-size="9" fill="#5b6b7f">modules/host</text>
+
+  <rect x="494" y="205" width="88" height="100" rx="8" fill="#fff" stroke="#d97706" stroke-width="2" stroke-dasharray="4 3"/>
+  <text x="538" y="240" text-anchor="middle" font-size="12" font-weight="700" fill="#1a2332">Host N</text>
+  <text x="538" y="256" text-anchor="middle" font-size="9" fill="#5b6b7f">up to host_count</text>
+  <text x="538" y="269" text-anchor="middle" font-size="9" fill="#5b6b7f">(max 5)</text>
+
+  <text x="298" y="332" font-size="10" fill="#5b6b7f">host_count identical hosts, one aws_instance per module.host["NN"] (for_each)</text>
+
+  <!-- IAM role label on arrow -->
+  <rect x="513" y="148" width="128" height="42" rx="8" fill="#ede9fe" stroke="#6b46c1" stroke-width="1.2"/>
+  <text x="577" y="165" text-anchor="middle" font-size="10" font-weight="700" fill="#6b46c1">shared IAM role</text>
+  <text x="577" y="179" text-anchor="middle" font-size="9" fill="#6b46c1">(iam.tf) — S3 + SSM, no keys</text>
+
+  <!-- Arrow hosts -> S3 -->
+  <line x1="582" y1="220" x2="653" y2="150" stroke="#6b46c1" stroke-width="2.2" marker-end="url(#arrowP)"/>
+
+  <!-- S3 bucket -->
+  <rect x="655" y="90" width="205" height="105" rx="10" fill="#fff" stroke="#15803d" stroke-width="2"/>
+  <text x="757" y="122" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2332">S3 data bucket</text>
+  <text x="757" y="139" text-anchor="middle" font-size="10" fill="#5b6b7f">storage.tf — private</text>
+  <text x="757" y="153" text-anchor="middle" font-size="10" fill="#5b6b7f">telemetry/ prefix</text>
+  <text x="757" y="167" text-anchor="middle" font-size="10" fill="#5b6b7f">30-day lifecycle rule</text>
+
+  <!-- Arrow hosts -> CloudWatch -->
+  <line x1="582" y1="270" x2="653" y2="290" stroke="#5b6b7f" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="596" y="288" font-size="9" fill="#5b6b7f">metrics</text>
+
+  <!-- CloudWatch -->
+  <rect x="655" y="240" width="205" height="105" rx="10" fill="#fff" stroke="#d97706" stroke-width="2"/>
+  <text x="757" y="272" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2332">CloudWatch</text>
+  <text x="757" y="289" text-anchor="middle" font-size="10" fill="#5b6b7f">monitoring.tf</text>
+  <text x="757" y="303" text-anchor="middle" font-size="10" fill="#5b6b7f">2 alarms per host</text>
+  <text x="757" y="317" text-anchor="middle" font-size="10" fill="#5b6b7f">+ fleet dashboard</text>
+
+  <!-- SSM dashed connection from control node to hosts -->
+  <path d="M 165 300 Q 235 255 298 255" fill="none" stroke="#15803d" stroke-width="2.2" stroke-dasharray="6 5" marker-end="url(#arrowG)"/>
+  <text x="178" y="220" font-size="10" font-weight="700" fill="#15803d">SSM Session Manager</text>
+  <text x="178" y="234" font-size="9" fill="#15803d">no inbound port 22 by default</text>
+
+  <!-- IGW to subnet -->
+  <line x1="240" y1="270" x2="263" y2="270" stroke="#5b6b7f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ad-demo note -->
+  <text x="205" y="536" font-size="11" font-weight="700" fill="#b91c1c">Separate and isolated — not part of the architecture above:</text>
+  <rect x="185" y="545" width="690" height="110" rx="12" fill="#fdecec" stroke="#b91c1c" stroke-width="2" stroke-dasharray="8 5"/>
+  <text x="205" y="570" font-size="13" font-weight="700" fill="#b91c1c">ad-demo/</text>
+  <text x="205" y="588" font-size="10" fill="#7a1717">Own VPC 10.99.0.0/16 — own state key in the same S3 bucket — zero shared resources</text>
+  <text x="205" y="604" font-size="10" fill="#7a1717">Deploys a real AWS Managed Microsoft AD (Standard) purely for a portfolio screenshot</text>
+  <text x="205" y="620" font-size="10" fill="#7a1717">Applied briefly, destroyed immediately after — see the warning in section 11</text>
+</svg>
+<figcaption>Hosts sit in a public subnet with no NAT Gateway. Management traffic (Ansible, ad-hoc shells) reaches them over SSM Session Manager — no inbound port 22, no SSH keys. The IAM role is the only path from a host to S3; ad-demo is deliberately disconnected from everything above it.</figcaption>
+</figure>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="prereq"><span class="hnum">3</span> Prerequisites</h2>
+<p class="h-sub">Everything from the base Project-IaC prerequisites, plus what this project's extra layers need.</p>
+
+<div class="card">
+  <ul class="checklist">
+    <li><strong>AWS account, IAM user, budget alert, AWS CLI, Terraform</strong> — same as the base project. If you haven't done that setup yet, do it first.</li>
+    <li><strong>Terraform 1.10.0 or later</strong> — <code>backend.hcl</code> turns on <code>use_lockfile = true</code> (native S3 state locking, which stops two concurrent <code>apply</code>s from writing to the same state file at once), a Terraform 1.10 feature. Older versions don't understand the argument at all.</li>
+    <li><strong>AWS Session Manager plugin (Windows)</strong> — <code>aws ssm start-session</code> run from a plain Windows PowerShell/CLI session shells out to this local binary: <code>winget install -e --id Amazon.SessionManagerPlugin</code></li>
+    <li><strong>AWS Session Manager plugin (WSL, separate install)</strong> — the Windows plugin above does <em>not</em> cover Ansible. The <code>aws_ssm</code> connection plugin runs inside WSL's own Linux environment and needs its own Linux build of the same plugin, or the baseline/telemetry playbooks fail immediately on <code>Gathering Facts</code>.</li>
+    <li><strong>Python 3 with boto3/botocore</strong> — required underneath the <code>amazon.aws</code> Ansible collection: <code>winget install Python.Python.3.12</code>, then <code>pip install boto3 botocore</code></li>
+    <li><strong>Ansible (ansible-core)</strong> — run it from WSL, a Linux VM, or macOS. Ansible does not support a native Windows control node; PowerShell alone won't run <code>ansible-playbook</code>.</li>
+    <li><strong>AWS credentials inside WSL</strong> — WSL keeps its own <code>~/.aws/</code>, separate from Windows' <code>%USERPROFILE%\.aws\</code>. Copy or share your credentials into WSL, or every Ansible command fails with <code>Unable to locate credentials</code> even though the Windows-side AWS CLI works fine.</li>
+    <li><strong>PowerShell AWS Tools modules</strong> for <code>Get-FleetHealth.ps1</code> — see the install command in section 10.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Install commands (PowerShell, run as Administrator where noted)</h3>
+<pre><code><span class="cmt"># --- Terraform (upgrade if you're still on the base project's older pin) ---</span>
+winget install Hashicorp.Terraform
+terraform version   <span class="cmt"># confirm 1.10.0 or later</span>
+
+<span class="cmt"># --- Session Manager plugin (Windows side) ---</span>
+winget install -e --id Amazon.SessionManagerPlugin
+session-manager-plugin   <span class="cmt"># prints version info if installed correctly</span>
+
+<span class="cmt"># --- Python for the Ansible collections ---</span>
+winget install Python.Python.3.12
+pip install boto3 botocore</code></pre>
+  <div class="callout warn">
+    <strong>Warning: Ansible does not run as a Windows control node.</strong>
+    Install and run <code>ansible-core</code> from WSL (<code>wsl --install</code> if you don't already have it), a Linux VM, or macOS — not directly from PowerShell. Terraform and the PowerShell health script both run fine natively on Windows; only the Ansible layer needs a POSIX environment.
+  </div>
+  <h3>Inside WSL: the two gotchas that only show up there</h3>
+<pre><code><span class="cmt"># --- Session Manager plugin, Linux build (separate from the Windows one above) ---</span>
+curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
+sudo dpkg -i session-manager-plugin.deb
+
+<span class="cmt"># --- AWS credentials: WSL has its own ~/.aws/, distinct from Windows' ---</span>
+mkdir -p ~/.aws
+cp /mnt/c/Users/&lt;you&gt;/.aws/credentials /mnt/c/Users/&lt;you&gt;/.aws/config ~/.aws/</code></pre>
+  <div class="callout warn">
+    <strong>Warning: skipping either of these fails silently until you run a playbook.</strong>
+    Without the Linux plugin, <code>ansible-playbook</code> fails immediately on <code>Gathering Facts</code> with <code>Failed to find required executable "session-manager-plugin"</code>. Without WSL's own credentials, it fails with <code>Unable to locate credentials</code> — even though <code>aws sts get-caller-identity</code> works fine on the Windows side. Both are one-time setup steps, not per-session ones.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="cost"><span class="hnum">4</span> Cost guardrails — read this before applying anything</h2>
+<p class="h-sub">Nothing here is dangerous if you read it first and destroy on schedule.</p>
+
+<div class="card">
+  <div class="callout warn">
+    <strong>Warning: this account is on AWS's credit-based Free Plan, not the classic 750-hour pool.</strong>
+    Running multiple hosts simultaneously burns your credit balance roughly in proportion to <code>host_count</code> — a "free-tier eligible" instance type isn't free just because several of them are running at once.
+  </div>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Line item</th><th>Reality</th></tr>
+    <tr><td>Every public IPv4 address</td><td>~£0.004/hr (approx.) since Feb 2024, free-tier eligible or not. <code>host_count</code> multiplies this directly — at the default of 2 that's ~£0.008/hr; at the maximum of 5 it's ~£0.02/hr. Small, but real.</td></tr>
+    <tr><td>EBS storage</td><td>The 30 GB/month free allowance is <strong>account-wide</strong>, shared with anything else in the account. Default is <code>host_count (2) × root_volume_gb (8) = 16 GB</code> — comfortable headroom, but the ceiling doesn't move if you raise either value.</td></tr>
+    <tr><td>CloudWatch alarms</td><td>2 per host. Always-Free ceiling is 10/account. <code>host_count</code> is capped at 5 by validation (5 × 2 = 10, exactly the ceiling) — but other alarms already in the account push the combined total higher.</td></tr>
+    <tr><td>AWS Managed Microsoft AD (<code>ad-demo/</code>)</td><td>The expensive one — see section 11 before touching it.</td></tr>
+  </table>
+  </div>
+  <figure>
+  <img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172128.png" alt="EC2 instance type picker showing pricing across 1354 instance types">
+  <figcaption>EC2 → Instance Types — 1,354 options, most of them wildly wrong for a two-host portfolio fleet. <code>t3.micro</code> is the deliberate, boring choice out of this whole list.</figcaption>
+  </figure>
+  <div class="callout danger">
+    <strong>Important: destroy everything except the Stage 0 bootstrap at the end of every session.</strong>
+<pre style="margin-top:8px"><code><span class="cmt"># from the project root</span>
+terraform destroy
+
+<span class="cmt"># ad-demo/, if you applied it — same session, right after your screenshot</span>
+cd ad-demo
+terraform destroy</code></pre>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="stage0"><span class="hnum">5</span> Stage 0: remote state bootstrap</h2>
+<p class="h-sub"><code>bootstrap/</code> — applied once, ever. Not part of the destroy-every-session cycle.</p>
+
+<div class="card">
+  <div class="callout info">
+    <strong>Note: why this can't use the backend it creates.</strong>
+    Classic chicken-and-egg problem: the root project's state lives in an S3 bucket, but something has to create that bucket before Terraform can point a backend at it. <code>bootstrap/</code> breaks the cycle by keeping its own state <strong>locally</strong> (<code>bootstrap/terraform.tfstate</code>, gitignored) permanently.
+  </div>
+</div>
+
+<div class="card step">
+  <div class="snum">5.1</div>
+  <div class="sbody">
+    <h3>Apply the bootstrap config</h3>
+<pre><code>cd bootstrap
+terraform init
+terraform apply
+terraform output state_bucket_name</code></pre>
+    <p>Copy the bucket name from the output — you'll need it in the next stage. Expect <code>Plan: 6 to add</code>.</p>
+  </div>
+</div>
+
+<div class="card step">
+  <div class="snum">5.2</div>
+  <div class="sbody">
+    <h3>Understand what it created</h3>
+    <p>An <strong>S3 bucket</strong> (versioned, SSE-S3 encrypted — S3's own server-side encryption, no separate key to manage — all public access blocked) — this is what actually holds state for the root project and <code>ad-demo/</code>, at different keys within the same bucket.</p>
+    <p>A <strong>DynamoDB table</strong>, included for reference only. This is the "classic" Terraform locking pattern — a table holding a lock item while an apply is in progress, standard for years and still what you'll find in most existing Terraform codebases. Neither of this project's actual configs uses it: they use Terraform's <strong>native S3 locking</strong> instead (<code>use_lockfile = true</code>, a conditional-write lock file inside the state bucket itself, Terraform ≥ 1.10). Both solve the same problem; the table is here purely so the older pattern is visible in the repo.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="stage1"><span class="hnum">6</span> Stage 1: multi-host fleet, module, and remote state</h2>
+<p class="h-sub">Back in the project root. This is where the fleet — and its reusable module — comes together.</p>
+
+<div class="card step">
+  <div class="snum">6.1</div>
+  <div class="sbody">
+    <h3>Point the backend at Stage 0's bucket</h3>
+    <p><code>backend.tf</code> declares an intentionally empty <code>s3</code> backend block — "partial configuration." The real bucket name (random suffix, different per account) is supplied separately at init time rather than hardcoded into a committed file:</p>
+<pre><code>cd ..   <span class="cmt"># back to the project root</span>
+Copy-Item backend.hcl.example backend.hcl
+notepad backend.hcl   <span class="cmt"># paste in state_bucket_name from Stage 0's output</span>
+terraform init -backend-config=backend.hcl</code></pre>
+    <p><code>backend.hcl</code> also sets <code>use_lockfile = true</code> — native S3 locking. No DynamoDB table is referenced from here.</p>
+  </div>
+</div>
+
+<div class="card step">
+  <div class="snum">6.2</div>
+  <div class="sbody">
+    <h3>The host module</h3>
+    <p><code>hosts.tf</code> decides <em>how many</em> hosts to create and <em>what's unique</em> about each one; <code>modules/host/</code> knows nothing about the rest of the project — it just launches one instance from whatever inputs it's given.</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Module input</th><th>Where it comes from</th></tr>
+      <tr><td><code>ami_id</code></td><td>AMI data source in <code>hosts.tf</code> (latest Amazon Linux 2023)</td></tr>
+      <tr><td><code>instance_type</code>, <code>root_volume_gb</code></td><td>Root <code>variables.tf</code></td></tr>
+      <tr><td><code>subnet_id</code>, <code>security_group_ids</code>, <code>iam_instance_profile</code></td><td>Shared resources from <code>network.tf</code> / <code>iam.tf</code></td></tr>
+      <tr><td><code>key_name</code></td><td><code>key_pair_name</code> variable (optional, null by default)</td></tr>
+      <tr><td><code>user_data</code></td><td><code>templatefile()</code> over <code>user_data.sh.tpl</code>, with a per-host <code>host_key</code></td></tr>
+      <tr><td><code>name_tag</code></td><td><code>"${project_name}-host-${host_key}"</code></td></tr>
+    </table>
+    </div>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Module output</th><th>Used for</th></tr>
+      <tr><td><code>instance_id</code></td><td>CloudWatch alarm dimensions, <code>host_instance_ids</code> output, SSM targeting</td></tr>
+      <tr><td><code>public_ip</code></td><td><code>host_public_ips</code> output, SSH command construction</td></tr>
+      <tr><td><code>private_ip</code></td><td>Available if you need it (not currently used elsewhere in this config)</td></tr>
+    </table>
+    </div>
+    <div class="callout info">
+      <strong>Note: for_each, not count.</strong>
+      Terraform offers two ways to create multiple copies of the same resource block: <code>count</code> (indexed <code>0</code>, <code>1</code>, <code>2</code>...) and <code>for_each</code> (keyed by a string or map you provide). With <code>count</code>, removing host <code>1</code> out of 3 shifts host <code>2</code> into index <code>1</code>'s slot — Terraform sees that as "destroy the old index 1, create a new index 1," cascading through every host after the one you removed. This project uses <code>for_each = toset(local.host_keys)</code> instead, with string keys like <code>"01"</code>, <code>"02"</code> — there's no index to shift, so removing a host from the middle of the fleet destroys only that host, not every host after it. See the troubleshooting table for what this does and doesn't protect you from.
+    </div>
+  </div>
+</div>
+
+<div class="card step">
+  <div class="snum">6.3</div>
+  <div class="sbody">
+    <h3>Plan and apply</h3>
+<pre><code>terraform fmt
+terraform validate
+terraform plan    <span class="cmt"># default host_count = 2</span>
+terraform apply</code></pre>
+    <p>With the default <code>host_count = 2</code>, the full plan across every stage in this root config (network + storage + IAM + hosts + monitoring) is <code class="hl">Plan: 21 to add, 0 to change, 0 to destroy</code>.</p>
+  </div>
+</div>
+
+<div class="card">
+<figure>
+<img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172059.png" alt="EC2 console instance list showing two running t3.micro hosts with status checks 3/3 passed">
+<figcaption>EC2 → Instances, right after <code>terraform apply</code> — both hosts <code>Running</code>, status checks <code>3/3 passed</code>.</figcaption>
+</figure>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="stage2"><span class="hnum">7</span> Stage 2: SSM + CloudWatch monitoring</h2>
+<p class="h-sub">Same root apply as Stage 1 — <code>monitoring.tf</code> lives alongside <code>hosts.tf</code>, not in a separate directory.</p>
+
+<div class="card">
+  <p>SSM Session Manager is the <strong>primary</strong> way to reach these hosts, not a fallback. <code>ssh_allowed_cidr</code> defaults to <code>null</code>, and the security group's SSH rule — a <code>dynamic "ingress"</code> block — simply doesn't exist unless you set it:</p>
+<pre><code>aws ssm start-session --target &lt;instance-id&gt;   <span class="cmt"># works with no key pair and no open port 22</span></code></pre>
+  <p><code>monitoring.tf</code> adds, per host, a <strong>StatusCheckFailed</strong> alarm (AWS's own instance/system health check) and a <strong>CPUUtilization</strong> alarm (threshold from <code>cpu_alarm_threshold</code>, default 80%). Both feed one <strong>CloudWatch dashboard</strong> for the whole fleet:</p>
+<pre><code>terraform output dashboard_url</code></pre>
+  <div class="callout tip">
+    <strong>Tip: alarm notifications are opt-in.</strong>
+    Alarms exist and show up in the console either way. Set <code>enable_alarm_notifications = true</code> and an <code>alarm_email</code> in <code>terraform.tfvars</code> if you actually want to be paged — you'll need to confirm the SNS subscription email AWS sends you.
+  </div>
+</div>
+
+<div class="card">
+<figure>
+<img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172336.png" alt="CloudWatch dashboard tf-advanced-fleet showing CPU and status check graphs for both hosts">
+<figcaption>CloudWatch → Dashboards → <code>tf-advanced-fleet</code> — one dashboard, two panels (CPU + status check) per host, built entirely by <code>monitoring.tf</code>.</figcaption>
+</figure>
+<figure>
+<img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172448.png" alt="CloudWatch alarms overview showing four alarms, all OK, zero in alarm state">
+<figcaption>CloudWatch → Overview — 4 alarms (2 per host: status-check + CPU), all <code>OK</code>.</figcaption>
+</figure>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="stage3"><span class="hnum">8</span> Stage 3: Ansible configuration management</h2>
+<p class="h-sub"><code>ansible/</code> — no SSH key anywhere in this layer, no static inventory file, no bastion host (a public jump box you'd otherwise SSH into first to reach hosts in a private network — SSM replaces the need for one here).</p>
+
+<div class="card step">
+  <div class="snum">8.1</div>
+  <div class="sbody">
+    <h3>Install collections and set the bucket name</h3>
+<pre><code><span class="cmt"># from WSL/Linux — ansible-core does not run as a Windows control node</span>
+cd ansible
+ansible-galaxy collection install -r requirements.yml</code></pre>
+    <p>Edit <code>group_vars/all.yml</code> and set <code>s3_bucket_name</code> to the real bucket name from <code>terraform output bucket_name</code>. It ships as a placeholder, <code>CHANGE_ME-set-from-terraform-output</code> — every module Ansible runs, not just file transfers, is relayed through this bucket, so the <code>aws_ssm</code> connection fails outright until it's set.</p>
+  </div>
+</div>
+
+<div class="card step">
+  <div class="snum">8.2</div>
+  <div class="sbody">
+    <h3>Confirm the dynamic inventory, then run the baseline</h3>
+    <p><code>inventory/aws_ec2.yml</code> asks AWS, on every run, which instances are tagged <code>Project: terraform-advanced</code> and currently <code>running</code> — there's no static host list to keep in sync by hand. Terraform is the single source of truth for which hosts exist.</p>
+<pre><code>ansible-inventory --graph                       <span class="cmt"># confirm the fleet is discovered</span>
+ansible-playbook playbook.yml --tags baseline</code></pre>
+    <p>The <code>baseline</code> tag: refreshes and fully updates dnf packages, installs <code>dnf-automatic</code> for unattended patching between playbook runs (applies updates, never auto-reboots — an unannounced reboot is exactly what an OT-flavoured environment wants to avoid), (re)installs nginx and deploys a fleet status page identically to every host, disables SSH password authentication as defense-in-depth, and confirms the SSM Agent service is active.</p>
+  </div>
+</div>
+
+<div class="card">
+<figure>
+<img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172236.png" alt="Browser showing the nginx-served fleet status page, templated identically across the fleet">
+<figcaption>The fleet status page the <code>baseline</code> tag's <code>template</code> task deploys — identical on every host except the identity block. The browser address bar has been replaced with a documentation-range IP (<code>203.0.113.10</code>). Plain HTTP on port 80 like this is for lab verification only.</figcaption>
+</figure>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="stage4"><span class="hnum">9</span> Stage 4: S3 telemetry/backup pipeline</h2>
+<p class="h-sub">Directly analogous to capturing field data and transferring it into a centralised library.</p>
+
+<div class="card step">
+  <div class="snum">9.1</div>
+  <div class="sbody">
+    <h3>Deploy the telemetry pipeline</h3>
+<pre><code>ansible-playbook playbook.yml --tags telemetry</code></pre>
+    <p>The <code>telemetry</code> tag deploys <code>telemetry-upload.sh</code> (templated with the bucket name and region baked in), a systemd <strong>oneshot service</strong>, and a systemd <strong>timer</strong> — not cron, so the schedule shows up in the same <code>systemctl</code>/<code>journalctl</code> tooling as every other service on the box. The timer fires every <code>telemetry_interval_minutes</code> (default 15), 2 minutes after boot, with a randomized 30-second delay so a fleet provisioned near-simultaneously doesn't send simultaneous S3 <code>PutObject</code> calls.</p>
+    <p>Each payload is small: hostname, timestamp, uptime, disk and memory usage, written to <code>s3://&lt;bucket&gt;/telemetry/&lt;hostname&gt;/&lt;timestamp&gt;.json</code>.</p>
+  </div>
+</div>
+
+<div class="card step">
+  <div class="snum">9.2</div>
+  <div class="sbody">
+    <h3>Verify objects are landing, and understand the retention rule</h3>
+<pre><code>aws s3 ls s3://&lt;bucket-name&gt;/telemetry/ --recursive</code></pre>
+    <p>On the Terraform side, <code>storage.tf</code>'s <code>aws_s3_bucket_lifecycle_configuration</code> expires everything under <code>telemetry/</code> after 30 days — the retention half of a "data library": telemetry accumulates long enough for analysis without silently growing (and costing) forever.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="health"><span class="hnum">10</span> Get-FleetHealth.ps1</h2>
+<p class="h-sub">A local PowerShell script — runs on your machine, not the instances. Usable from Stage 2 onward.</p>
+
+<div class="card">
+  <p>Install the modules it needs first:</p>
+<pre><code>Install-Module -Name AWS.Tools.Installer -Scope CurrentUser
+Install-AWSToolsModule AWS.Tools.EC2,AWS.Tools.SimpleSystemsManagement,AWS.Tools.CloudWatch,AWS.Tools.SecurityToken -CleanUp</code></pre>
+  <div class="callout info">
+    <strong>Note: all four modules are required.</strong>
+    The script calls <code>Get-STSCallerIdentity</code> (from <code>AWS.Tools.SecurityToken</code>) as its first sanity check. All four modules are declared in the script's <code>#Requires</code> header, so PowerShell refuses to start it if any of them is missing — install all four, as above.
+  </div>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Parameter</th><th>Default</th><th>Purpose</th></tr>
+    <tr><td><code>-ProjectTag</code></td><td><code>terraform-advanced</code></td><td>Filters instances by the <code>Project</code> tag <code>providers.tf</code> sets on everything</td></tr>
+    <tr><td><code>-Region</code></td><td><code>us-east-1</code></td><td>Must match the region you actually deployed into</td></tr>
+    <tr><td><code>-ReportPath</code></td><td>(none)</td><td>If set, also writes a timestamped <code>.html</code> and <code>.csv</code> report there (created if missing — point it at the gitignored <code>reports/</code> folder)</td></tr>
+    <tr><td><code>-SkipCommandProbe</code></td><td>off</td><td>Skips the SSM Run Command probe (uptime/disk/nginx/last telemetry run from the <code>telemetry-upload.service</code> journal — adds ~10-20s per instance) for a faster CloudWatch-only check</td></tr>
+  </table>
+  </div>
+<pre><code>cd scripts
+.\Get-FleetHealth.ps1
+.\Get-FleetHealth.ps1 -ReportPath .\reports -Region us-east-1</code></pre>
+  <div class="callout warn">
+    <strong>Warning: this runs as your local identity, not the fleet's instance role.</strong>
+    Two entirely separate permission boundaries. The script confirms which identity it's using with <code>Get-STSCallerIdentity</code> before doing anything else, specifically so an <code>AccessDenied</code> further down isn't misattributed to the instance role.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="addemo"><span class="hnum">11</span> Optional: ad-demo — AWS Managed Microsoft AD</h2>
+<p class="h-sub">Read this entire section before running anything in <code>ad-demo/</code>.</p>
+
+<div class="card">
+  <div class="callout danger">
+    <strong>Important: this costs real money per hour, from the moment it's created, whether or not you use it.</strong>
+    Roughly <strong>~$88/month (approx. £65-70)</strong> for Standard Edition if left running continuously, based on AWS's published USD pricing — check the current Directory Service pricing page before applying. This is not a free-tier eligible resource of any kind.
+  </div>
+  <div class="callout danger">
+    <strong>Important: budget 1-1.5 hours of wall-clock time for one screenshot.</strong>
+    Provisioning typically takes 20-40 minutes to reach <code>Active</code> status (per AWS's own documentation; budget up to 45 to be safe). <code>terraform destroy</code> takes a similar amount of time. The directory is only briefly "Active" during that window, but the apply-to-destroy cycle around it is not quick.
+  </div>
+  <div class="callout danger">
+    <strong>Important: check for free-trial eligibility BEFORE you apply, then destroy immediately regardless.</strong>
+    The AWS Directory Service console may show a one-time 30-day / 1,500-directory-controller-hour trial for accounts new to the service — that would cover this entire demo at no cost. Don't assume it applies to your account; verify it there first. Whether or not the trial applies, destroy this immediately after your screenshot. Don't leave it running "just in case."
+  </div>
+
+  <p>Isolation, by design: separate VPC (<code>10.99.0.0/16</code>), separate state key in the same S3 bucket Stage 0 created, zero shared resources, zero data-source lookups between this and the main fleet. This is a deliberate, brief, real demonstration for portfolio authenticity — not a running part of the architecture (see the diagram in section 2).</p>
+
+<pre><code>cd ad-demo
+Copy-Item backend.hcl.example backend.hcl
+notepad backend.hcl        <span class="cmt"># same bucket as Stage 0, different key — see the file's own comments</span>
+Copy-Item terraform.tfvars.example terraform.tfvars
+<span class="cmt"># set directory_password — no default, must meet the rules below</span>
+terraform init -backend-config=backend.hcl
+terraform plan             <span class="cmt"># expect: Plan: 8 to add</span>
+terraform apply
+terraform output console_url</code></pre>
+
+  <div class="callout info">
+    <strong>Note: the password validation rules, exactly.</strong>
+    <code>variables.tf</code>'s validation block enforces exactly what AWS's <code>CreateMicrosoftAD</code> API requires: <strong>8-64 characters</strong>, must <strong>not contain the word "admin"</strong> (case-insensitive), and characters from <strong>at least 3 of these 4 categories</strong>: lowercase letters, uppercase letters, digits, non-alphanumeric characters. This was cross-checked against AWS's actual API constraints and matches — it isn't a rough approximation.
+  </div>
+
+<pre><code><span class="cmt"># Preferred: environment variable, not a value written to disk.</span>
+<span class="cmt"># Single quotes in PowerShell = literal string, no interpolation of $ or other characters.</span>
+$env:TF_VAR_directory_password = 'YourStrongPassword1!'</code></pre>
+
+  <p>Once you have your screenshot (Directory Service console → your directory → Status: <code>Active</code>):</p>
+<pre><code>terraform destroy</code></pre>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="troubleshooting"><span class="hnum">12</span> Troubleshooting</h2>
+<p class="h-sub">Specific causes and fixes, read against the actual code in this repo.</p>
+
+<div class="card">
+  <div class="tablewrap">
+  <table>
+    <tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr>
+    <tr>
+      <td><code>terraform plan</code> on a <code>host_count</code> change wants to destroy hosts you didn't touch</td>
+      <td><code>for_each</code> uses string keys (<code>"01"</code>, <code>"02"</code>...), so a genuine <code>host_count</code> change only destroys the highest-numbered host(s) removed, plus their 2 alarms each, plus an in-place dashboard update. If the plan shows <em>every</em> host being replaced, the real trigger is usually <code>instance_type</code>, <code>root_volume_gb</code>, or <code>key_pair_name</code> in <code>terraform.tfvars</code> — these propagate identically into every <code>module.host</code> call.</td>
+      <td>Read the plan's per-resource action list before applying. If you didn't mean to replace every host, revert the shared variable you just changed.</td>
+    </tr>
+    <tr>
+      <td>SSM console/CLI shows an instance as "Not connected"</td>
+      <td>Most commonly, the SSM Agent hasn't registered yet (give it 1-2 minutes after apply); occasionally, the console is pointed at the wrong region (must match <code>var.aws_region</code>, <code>us-east-1</code> by default).</td>
+      <td>Wait a couple of minutes, then confirm directly: <code>aws ssm describe-instance-information --region us-east-1</code>. Confirm console and CLI are pointed at the same region.</td>
+    </tr>
+    <tr>
+      <td>Ansible reports <code>UNREACHABLE</code> over the <code>aws_ssm</code> connection</td>
+      <td>One of: <code>s3_bucket_name</code> in <code>group_vars/all.yml</code> still has its placeholder value; the local Session Manager plugin isn't installed; <code>boto3</code>/<code>botocore</code> aren't installed in the Python environment <code>ansible-playbook</code> runs from; your own control-machine IAM identity lacks <code>ssm:StartSession</code> — a different permission boundary from the instance role.</td>
+      <td>Fill in <code>s3_bucket_name</code> from <code>terraform output bucket_name</code>; confirm <code>session-manager-plugin</code> is on PATH; <code>pip install boto3 botocore</code>; confirm your local identity can start SSM sessions with <code>aws ssm start-session --target &lt;id&gt;</code> directly.</td>
+    </tr>
+    <tr>
+      <td>First <code>terraform init</code> against the S3 backend fails</td>
+      <td><code>bootstrap/</code> hasn't been applied yet, <code>backend.hcl</code> still has the placeholder bucket name from <code>backend.hcl.example</code>, or <code>-backend-config=backend.hcl</code> was left off the <code>init</code> command entirely.</td>
+      <td>Apply <code>bootstrap/</code> first; run <code>terraform output state_bucket_name</code> there and paste the exact value into <code>backend.hcl</code>; always pass <code>-backend-config=backend.hcl</code>; add <code>-reconfigure</code> if a previous partial init left things cached.</td>
+    </tr>
+    <tr>
+      <td>CloudWatch alarms stuck in <code>INSUFFICIENT_DATA</code></td>
+      <td>The status-check alarm needs one full 5-minute datapoint; the CPU alarm needs two consecutive ones (~10 minutes) — a freshly-applied host simply hasn't existed long enough. <code>treat_missing_data</code> differs between them: <code>status_check</code> is <code>"breaching"</code>, <code>cpu</code> is <code>"notBreaching"</code>.</td>
+      <td>Wait 10-15 minutes after apply before judging alarm state. Confirm the instance is actually <code>running</code> — a stopped instance stops emitting these metrics entirely.</td>
+    </tr>
+    <tr>
+      <td>Alarm count approaching the 10-alarm Always-Free ceiling</td>
+      <td>2 alarms × <code>host_count</code> (capped at 5, so this project alone tops out exactly at 10, not over it) — but other alarms already in the account (another project, or a previous session's leftovers) push the account-wide total higher.</td>
+      <td>Check the account-wide total before raising <code>host_count</code>: <code>aws cloudwatch describe-alarms --region us-east-1 --query "length(MetricAlarms)"</code>. Confirm previous sessions were fully destroyed.</td>
+    </tr>
+    <tr>
+      <td><code>Get-FleetHealth.ps1</code> gets <code>AccessDenied</code> on CloudWatch/SSM calls</td>
+      <td>The script runs as your <strong>local</strong> IAM identity, not the fleet's shared instance role — separate permission boundary.</td>
+      <td>Run <code>Get-STSCallerIdentity</code> yourself first to confirm which identity the script will use; grant the local identity read access to EC2/CloudWatch/SSM if it's narrower than <code>AdministratorAccess</code>.</td>
+    </tr>
+    <tr>
+      <td><code>ad-demo</code> apply succeeds but sits in <code>Requested</code>/<code>Creating</code> for a long time</td>
+      <td>Expected, not a fault — AWS's own documentation quotes 20-40 minutes to reach <code>Active</code>.</td>
+      <td>Poll with <code>aws ds describe-directories --directory-ids &lt;id&gt;</code> or refresh the console. Only worth investigating if it exceeds roughly an hour or moves to <code>Failed</code>.</td>
+    </tr>
+    <tr>
+      <td><code>ad-demo</code> password rejected by AWS despite passing <code>terraform validate</code></td>
+      <td>Terraform's validation block matches AWS's real <code>CreateMicrosoftAD</code> rules exactly — there's no gap to fix in the code. The rejection is almost always something Terraform can't see: PowerShell interpreting an unquoted <code>$</code> before Terraform ever receives the value, stray whitespace pasted into <code>terraform.tfvars</code>, or a shell-mangled special character.</td>
+      <td>Set the password via <code>$env:TF_VAR_directory_password = '...'</code> using <strong>single quotes</strong> in PowerShell (literal, no interpolation); read the exact <code>InvalidParameterException</code> text in the apply output — it names the specific rule that failed.</td>
+    </tr>
+    <tr>
+      <td><code>terraform init -backend-config=backend.hcl</code> fails in <strong>Windows PowerShell 5.1</strong> with <code>Error: Too many command line arguments. Did you mean to use -chdir?</code>, even though the syntax matches Terraform's own docs exactly</td>
+      <td>Windows PowerShell 5.1's native argument parser doesn't hand a single-dash <code>-flag=value</code> argument to <code>terraform.exe</code> the way Terraform expects — a PowerShell-side parsing quirk, not a Terraform bug, and not specific to <code>init</code>: any single-dash <code>-flag=value</code> Terraform invocation hits it from PowerShell 5.1.</td>
+      <td>Prefix the command with PowerShell's stop-parsing token: <code>terraform init --% -backend-config=backend.hcl</code>. Everything after <code>--%</code> is passed through literally. PowerShell 7+ and WSL/Linux shells aren't affected.</td>
+    </tr>
+    <tr>
+      <td>From WSL, <code>ansible-inventory --graph</code> silently shows only <code>@ungrouped</code> — no fleet, no obvious error</td>
+      <td>Ansible refuses to auto-load <code>ansible.cfg</code> from the current directory when that directory is <strong>world-writable (777)</strong> — which is how WSL exposes Windows-mounted <code>/mnt/c/...</code> paths by default. This is a deliberate Ansible safety check, and it only surfaces as a warning buried in the output.</td>
+      <td>Set <code>ANSIBLE_CONFIG</code> explicitly rather than relying on the implicit cwd search — an explicit path bypasses the check (it only blocks the <em>implicit</em> search): <code>ANSIBLE_CONFIG=./ansible.cfg ansible-inventory --graph</code> (same prefix for <code>ansible-playbook</code>).</td>
+    </tr>
+    <tr>
+      <td><code>Get-FleetHealth.ps1</code> fails on every host with <code>A parameter cannot be found that matches parameter name 'UtcStartTime'</code></td>
+      <td>The script calls <code>Get-CWMetricStatistic</code> with <code>-StartTime</code>/<code>-EndTime</code> (already UTC — <code>$now</code> is computed via <code>.ToUniversalTime()</code>); an older version of the script used <code>-UtcStartTime</code>/<code>-UtcEndTime</code>, which the currently-installed <code>AWS.Tools.CloudWatch</code> module doesn't expose. Already fixed in the script as written — the parameter names are set by whichever <code>AWS.Tools.CloudWatch</code> version you have installed, not by this repo.</td>
+      <td>If this ever resurfaces against a different <code>AWS.Tools.CloudWatch</code> version, check the real parameter names with <code>Get-Command Get-CWMetricStatistic -Syntax</code> and update the two calls in the script to match.</td>
+    </tr>
+    <tr>
+      <td><code>terraform destroy</code> in <code>bootstrap/</code> fails with <code>BucketNotEmpty: ... You must delete all versions in the bucket</code></td>
+      <td>Only relevant if you ever want to fully retire Stage 0 — not the normal per-session flow, where <code>bootstrap/</code> is left running permanently. <code>bootstrap/main.tf</code>'s state bucket deliberately has no <code>force_destroy</code> and versioning enabled (see the comments in that file). As long as it holds the root project's real state file, S3 versioned-bucket deletion requires purging every object version <em>and</em> every delete marker, not just current objects.</td>
+      <td>One-time manual fix: enumerate every version and delete marker with <code>aws s3api list-object-versions --bucket &lt;bucket&gt;</code> and batch-delete them with <code>aws s3api delete-objects --bucket &lt;bucket&gt; --delete file://versions.json</code>, then retry <code>terraform destroy</code>.</td>
+    </tr>
+  </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="destroy"><span class="hnum">13</span> Destroy when you're done — every session</h2>
+<p class="h-sub">Same discipline as the base project, applied to more moving pieces.</p>
+
+<div class="card">
+<pre><code><span class="cmt"># from the project root</span>
+terraform destroy
+
+<span class="cmt"># and ad-demo/, the SAME session you applied it, right after your screenshot</span>
+cd ad-demo
+terraform destroy</code></pre>
+  <div class="callout danger">
+    <strong>Important: everything except bootstrap/ gets destroyed at the end of every session.</strong>
+    <ul style="margin:8px 0 0; padding-left:18px;">
+      <li>The fleet's public IPv4 charges and EBS usage are small individually but real, and they add up across a full fleet left running unattended.</li>
+      <li><code>ad-demo/</code> is the one that actually matters cost-wise — see section 11 if you skipped it.</li>
+      <li><code>bootstrap/</code> is the sole exception: it holds your state, and destroying it would take the state bucket (and every other project's state stored inside it) with it.</li>
+      <li>Rebuilding is one <code>terraform apply</code> away — that's the whole point of IaC.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="files"><span class="hnum">14</span> What each file does</h2>
+<p class="h-sub">Grouped by directory, in roughly the order you'll read them.</p>
+
+<div class="card">
+  <h3 style="margin-top:0">Bootstrap (<code>bootstrap/</code>)</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>File</th><th>Contents</th></tr>
+    <tr><td><code>main.tf</code></td><td>S3 state bucket (versioned, encrypted, public access blocked) + reference DynamoDB lock table</td></tr>
+    <tr><td><code>variables.tf</code></td><td><code>aws_region</code>, <code>project_name</code></td></tr>
+    <tr><td><code>outputs.tf</code></td><td><code>state_bucket_name</code>, <code>state_bucket_arn</code>, <code>dynamodb_table_name</code></td></tr>
+    <tr><td><code>providers.tf</code></td><td>AWS provider + tags</td></tr>
+    <tr><td><code>versions.tf</code></td><td>Terraform/provider version pins</td></tr>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Root project</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>File</th><th>Contents</th></tr>
+    <tr><td><code>versions.tf</code></td><td>Terraform ≥ 1.10.0 (native S3 locking) + provider version pins</td></tr>
+    <tr><td><code>providers.tf</code></td><td>AWS provider region + default_tags</td></tr>
+    <tr><td><code>backend.tf</code></td><td>Empty s3 backend block — partial configuration, filled in at init time</td></tr>
+    <tr><td><code>backend.hcl.example</code></td><td>Template for backend.hcl: bucket, key, region, use_lockfile = true</td></tr>
+    <tr><td><code>variables.tf</code></td><td><code>project_name</code>, <code>aws_region</code>, <code>ssh_allowed_cidr</code>, <code>key_pair_name</code>, <code>host_count</code> (1-5), <code>root_volume_gb</code>, <code>instance_type</code>, <code>cpu_alarm_threshold</code>, <code>enable_alarm_notifications</code>, <code>alarm_email</code></td></tr>
+    <tr><td><code>network.tf</code></td><td>VPC, public subnet, IGW, route table, security group</td></tr>
+    <tr><td><code>storage.tf</code></td><td>Private S3 data bucket, public access block, telemetry/ 30-day lifecycle rule</td></tr>
+    <tr><td><code>iam.tf</code></td><td>Shared fleet IAM role, inline least-privilege S3 policy, AmazonSSMManagedInstanceCore attachment, instance profile</td></tr>
+    <tr><td><code>hosts.tf</code></td><td>AMI data source, host_keys locals, module "host" for_each</td></tr>
+    <tr><td><code>monitoring.tf</code></td><td>Per-host status-check + CPU alarms, fleet dashboard, optional SNS topic/subscription</td></tr>
+    <tr><td><code>outputs.tf</code></td><td>host_public_ips, bucket_name, dashboard_url, ssh_commands, host_instance_ids</td></tr>
+    <tr><td><code>user_data.sh.tpl</code></td><td>First-boot script: installs nginx, writes a per-host status page</td></tr>
+    <tr><td><code>terraform.tfvars.example</code></td><td>Template for personal values</td></tr>
+    <tr><td><code>.gitignore</code></td><td>State files, .terraform/, tfvars, .pem/.ppk, backend.hcl, reports/, Ansible .retry files, raw unredacted screenshots, local guide-build helper scripts</td></tr>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Host module (<code>modules/host/</code>)</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>File</th><th>Contents</th></tr>
+    <tr><td><code>main.tf</code></td><td>Single aws_instance resource</td></tr>
+    <tr><td><code>variables.tf</code></td><td>ami_id, instance_type, subnet_id, security_group_ids, iam_instance_profile, key_name, root_volume_gb, user_data, name_tag</td></tr>
+    <tr><td><code>outputs.tf</code></td><td>instance_id, public_ip, private_ip</td></tr>
+    <tr><td><code>versions.tf</code></td><td>Provider version pin, independent of the root's</td></tr>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Ansible (<code>ansible/</code>)</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>File</th><th>Contents</th></tr>
+    <tr><td><code>ansible.cfg</code></td><td>Dynamic inventory only, host_key_checking off, amazon.aws.aws_ec2 inventory plugin enabled</td></tr>
+    <tr><td><code>requirements.yml</code></td><td>amazon.aws, community.aws, ansible.posix Galaxy collections</td></tr>
+    <tr><td><code>inventory/aws_ec2.yml</code></td><td>Dynamic inventory: filters on tag:Project = terraform-advanced + running, composes ansible_aws_ssm_instance_id per host</td></tr>
+    <tr><td><code>group_vars/all.yml</code></td><td>aws_ssm connection settings, s3_bucket_name (fill in from Terraform output), telemetry interval/prefix/path</td></tr>
+    <tr><td><code>playbook.yml</code></td><td>baseline tag (patching, nginx, hardening) and telemetry tag (upload script + systemd timer), all over SSM</td></tr>
+    <tr><td><code>templates/index.html.j2</code></td><td>Fleet status page, templated identically onto every host</td></tr>
+    <tr><td><code>templates/telemetry-upload.sh.j2</code></td><td>Collects host metrics, uploads JSON to S3</td></tr>
+    <tr><td><code>templates/telemetry-upload.service.j2</code></td><td>systemd oneshot service that runs the upload script</td></tr>
+    <tr><td><code>templates/telemetry-upload.timer.j2</code></td><td>systemd timer — default every 15 minutes</td></tr>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">AD demo (<code>ad-demo/</code>)</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>File</th><th>Contents</th></tr>
+    <tr><td><code>versions.tf</code>, <code>providers.tf</code></td><td>Terraform ≥ 1.10.0, distinct Project tag, independent of the root project</td></tr>
+    <tr><td><code>backend.tf</code>, <code>backend.hcl.example</code></td><td>Same S3 bucket as the root project, different state key</td></tr>
+    <tr><td><code>network.tf</code></td><td>Dedicated VPC 10.99.0.0/16, two subnets in two AZs (AWS's own requirement for a Managed AD directory), IGW, route table</td></tr>
+    <tr><td><code>directory.tf</code></td><td>aws_directory_service_directory (Standard MicrosoftAD) — carries the cost/timing warning in-code</td></tr>
+    <tr><td><code>variables.tf</code></td><td>aws_region, project_name, directory_name, directory_short_name, directory_password (no default, validated), directory_edition</td></tr>
+    <tr><td><code>outputs.tf</code></td><td>directory_id, dns_ip_addresses, access_url, security_group_id, console_url, next_steps</td></tr>
+    <tr><td><code>terraform.tfvars.example</code></td><td>Template — password must be set separately, never committed</td></tr>
+    <tr><td><code>.gitignore</code></td><td>State files, backend.hcl, tfvars</td></tr>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Scripts (<code>scripts/</code>)</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>File</th><th>Contents</th></tr>
+    <tr><td><code>Get-FleetHealth.ps1</code></td><td>Local PowerShell fleet health report — EC2 + CloudWatch + optional SSM Run Command probe, console table or HTML/CSV export</td></tr>
+  </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="next"><span class="hnum">15</span> What to learn next</h2>
+<p class="h-sub">Deliberately not built here — the natural next rungs.</p>
+
+<div class="card">
+  <div class="tablewrap">
+  <table>
+    <tr><th>Topic</th><th>Why it matters</th></tr>
+    <tr><td><strong>Private subnet + VPC Interface Endpoints</strong></td><td>This project's hosts sit in a public subnet for simplicity and cost (no NAT Gateway). A locked-down variant would move them to a private subnet and add Interface Endpoints for SSM/S3/CloudWatch so they never need a public IP or a route to the internet at all — a realistic next step for anything OT-adjacent.</td></tr>
+    <tr><td><strong>HTTPS instead of open port 80</strong></td><td>The lab serves its status page over plain HTTP to 0.0.0.0/0. A real service would put an Application Load Balancer with an ACM certificate in front, redirect or close port 80, and only allow the load balancer to reach the hosts.</td></tr>
+    <tr><td><strong>tflint / checkov</strong></td><td>Automated linting and security-policy scanning for the .tf files, catching misconfigurations before apply rather than after.</td></tr>
+    <tr><td><strong>CI running terraform plan on PRs</strong></td><td>A GitHub Actions workflow that runs fmt -check, validate, and plan on every pull request — the review-before-merge discipline a real team would expect.</td></tr>
+    <tr><td><strong>Per-host IAM roles</strong></td><td>This project deliberately shares one IAM role across the whole fleet because every host does identical work. A fleet with differentiated roles would want per-host or per-role profiles instead.</td></tr>
+    <tr><td><strong>Auto Scaling Group</strong></td><td>Replacing the fixed for_each fleet with an ASG would add self-healing at the cost of losing the simple, individually-addressable host-01/host-02 naming this project relies on for its walkthrough.</td></tr>
+    <tr><td><strong>Secrets Manager for the AD demo password</strong></td><td>directory_password currently lives in an environment variable or a gitignored tfvars file. A team setting would generate and store it in AWS Secrets Manager instead, with Terraform reading it via a data source.</td></tr>
+  </table>
+  </div>
+</div>
+
+<footer>
+  Terraform + AWS Advanced Project · Project-IaC-Advanced ·
+  To save as PDF: press <strong>Ctrl+P</strong> in your browser → destination "Save as PDF"
+</footer>
+
+</div>
+</body>
+</html>

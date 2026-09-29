@@ -1,0 +1,229 @@
+---
+# playbook.yml
+#
+# Single playbook for the whole fleet, split into two independently
+# runnable slices via tags:
+#
+#   ansible-playbook playbook.yml                 # everything
+#   ansible-playbook playbook.yml --tags baseline  # OS/nginx/hardening only
+#   ansible-playbook playbook.yml --tags telemetry # telemetry pipeline only
+#
+# Kept as one file rather than split into roles because the fleet has
+# exactly one "role" in practice (nginx web host + telemetry reporter) -
+# roles/ directory indirection would be structure for its own sake at
+# this scale. Tags give the same "run just part of this" flexibility a
+# hiring manager would expect to see, without the extra ceremony.
+#
+# Every task here runs over AWS Systems Manager Session Manager (see
+# inventory/aws_ec2.yml + group_vars/all.yml for the aws_ssm connection
+# setup) - there is no SSH key anywhere in this repo, and there doesn't
+# need to be.
+
+- name: Configure and report on the terraform-advanced EC2 fleet
+  hosts: fleet
+  become: true # Every task here needs root - package installs, systemd units, files outside the home dir.
+  gather_facts: true # ansible_hostname/ansible_distribution/ansible_date_time are used in templates below.
+
+  tasks:
+    # =================================================================
+    # baseline: OS patching, nginx, and light hardening
+    # =================================================================
+
+    - name: Refresh the dnf package cache
+      ansible.builtin.dnf:
+        update_cache: true
+      tags: [baseline]
+
+    - name: Update all installed packages to their latest available version
+      # A full "dnf update" (not just security patches) run explicitly by
+      # Ansible, on demand - this is the config-management equivalent of
+      # patch day, and re-running the playbook is how you prove the fleet
+      # is caught up. dnf-automatic (next task) covers the gap *between*
+      # Ansible runs; this task covers "right now".
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+      tags: [baseline]
+
+    - name: Install dnf-automatic for unattended patching between playbook runs
+      # Ansible runs are on-demand (or on whatever schedule the operator
+      # chooses); dnf-automatic fills the gap so security patches don't
+      # sit unapplied for however long that is. Download-only vs.
+      # apply-and-reboot is a real tradeoff on a fleet like this - the
+      # config below applies updates but never reboots unattended, since
+      # an unannounced reboot of a "production-ish" host is exactly the
+      # kind of surprise an OT-flavoured environment wants to avoid.
+      ansible.builtin.dnf:
+        name: dnf-automatic
+        state: present
+      tags: [baseline]
+
+    - name: Configure dnf-automatic to apply updates without auto-rebooting
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/automatic.conf
+        regexp: "^apply_updates\\s*="
+        line: "apply_updates = yes"
+      tags: [baseline]
+
+    - name: Enable and start the dnf-automatic timer
+      ansible.builtin.systemd:
+        name: dnf-automatic.timer
+        enabled: true
+        state: started
+      tags: [baseline]
+
+    - name: Install nginx
+      # Terraform's user_data already installs nginx once at first boot -
+      # this task exists so the playbook is still correct (and idempotent)
+      # even run against a host that was rebuilt some other way, and so
+      # "nginx present" is verifiably a property of the Ansible config,
+      # not just a one-time boot script.
+      ansible.builtin.dnf:
+        name: nginx
+        state: present
+      tags: [baseline]
+
+    - name: Enable and start nginx
+      ansible.builtin.systemd:
+        name: nginx
+        enabled: true
+        state: started
+      tags: [baseline]
+
+    - name: Deploy the fleet status page
+      # This is the direct contrast with Terraform's user_data: user_data
+      # ran once, per-host, at launch, and could easily have baked in
+      # per-host differences by accident. This template is pushed
+      # identically to every host on every run - the only thing that
+      # varies is data Jinja substitutes from facts (hostname, OS
+      # version), proving the fleet's configuration is centrally managed
+      # and consistent, not hand-assembled per instance.
+      ansible.builtin.template:
+        src: templates/index.html.j2
+        dest: /usr/share/nginx/html/index.html
+        owner: root
+        group: root
+        mode: "0644"
+      tags: [baseline]
+
+    - name: Check whether sshd is present on this host
+      # AL2023's AMI ships openssh-server by default (Terraform's
+      # ssh_allowed_cidr variable treats SSH as an optional fallback, not
+      # something it removes) - so sshd is very likely here even though
+      # this playbook never uses it. Checked explicitly rather than
+      # assumed, so the hardening tasks below degrade gracefully on any
+      # future base image that drops it.
+      ansible.builtin.stat:
+        path: /etc/ssh/sshd_config
+      register: sshd_config_file
+      tags: [baseline]
+
+    - name: Disable SSH password authentication (key-only, defense in depth)
+      # Belt-and-suspenders: this fleet is managed over SSM and doesn't
+      # rely on SSH at all, but if a security group ever gets loosened to
+      # allow port 22 (accidentally or for a one-off diagnostic), password
+      # auth being off means brute-forcing a login is not viable - only a
+      # pre-authorized key would work, and none of this project's tooling
+      # provisions one.
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PasswordAuthentication\\s+"
+        line: "PasswordAuthentication no"
+        validate: "/usr/sbin/sshd -t -f %s"
+      when: sshd_config_file.stat.exists
+      notify: Restart sshd
+      tags: [baseline]
+
+    - name: Confirm the SSM Agent service is active
+      # If this task ever fails, it means the very connection this
+      # playbook is running over is about to stop working after the
+      # current session ends - worth checking explicitly rather than
+      # just assuming "the playbook ran, so it must be fine" (SSM Agent
+      # keeps an already-open session alive even if the service were
+      # flapping, so this isn't purely redundant with "the play started").
+      ansible.builtin.systemd:
+        name: amazon-ssm-agent
+        enabled: true
+        state: started
+      tags: [baseline]
+
+    # =================================================================
+    # telemetry: periodic host-health snapshot shipped to S3
+    # =================================================================
+
+    - name: Confirm the AWS CLI is present
+      # Amazon Linux 2023's AMI ships the AWS CLI v2 out of the box, so
+      # this should normally be a no-op - it's here defensively, so the
+      # telemetry pipeline doesn't silently fail on some future/custom
+      # AMI that dropped it, and so the requirement is documented in code
+      # rather than only in prose.
+      ansible.builtin.command:
+        cmd: aws --version
+      register: aws_cli_check
+      changed_when: false
+      failed_when: false
+      tags: [telemetry]
+
+    - name: Install the AWS CLI if it was not already present
+      ansible.builtin.dnf:
+        name: awscli2
+        state: present
+      when: aws_cli_check.rc != 0
+      tags: [telemetry]
+
+    - name: Deploy the telemetry upload script
+      ansible.builtin.template:
+        src: templates/telemetry-upload.sh.j2
+        dest: "{{ telemetry_script_path }}"
+        owner: root
+        group: root
+        mode: "0750"
+      tags: [telemetry]
+
+    - name: Deploy the telemetry-upload systemd service unit
+      ansible.builtin.template:
+        src: templates/telemetry-upload.service.j2
+        dest: /etc/systemd/system/telemetry-upload.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd
+      tags: [telemetry]
+
+    - name: Deploy the telemetry-upload systemd timer unit
+      ansible.builtin.template:
+        src: templates/telemetry-upload.timer.j2
+        dest: /etc/systemd/system/telemetry-upload.timer
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd
+      tags: [telemetry]
+
+    - name: Flush handlers so the timer unit file is current before (re)enabling it
+      # Ensures the systemctl daemon-reload triggered above (if the unit
+      # files changed this run) has actually happened before the next
+      # task touches the timer - otherwise a same-run edit-then-enable
+      # could act on a stale unit definition.
+      ansible.builtin.meta: flush_handlers
+      tags: [telemetry]
+
+    - name: Enable and start the telemetry-upload timer
+      # Only the .timer is enabled/started directly - the paired .service
+      # is a oneshot that the timer invokes on schedule, not something
+      # that should be "running" continuously itself.
+      ansible.builtin.systemd:
+        name: telemetry-upload.timer
+        enabled: true
+        state: started
+      tags: [telemetry]
+
+  handlers:
+    - name: Restart sshd
+      ansible.builtin.systemd:
+        name: sshd
+        state: restarted
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true

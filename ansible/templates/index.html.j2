@@ -1,0 +1,55 @@
+<!--
+  index.html.j2
+
+  Deployed byte-for-byte identically to every host in the fleet via the
+  `template` module - the ONLY thing that differs between hosts is the
+  {{ ansible_hostname }} / inventory_hostname value Jinja substitutes in.
+  That's the point of this file: Terraform's user_data script bootstraps
+  nginx once, at first boot, and could have written a static index.html
+  directly - but a hardcoded per-host user_data page is exactly what
+  configuration drift looks like at fleet scale. Re-deploying this same
+  template with Ansible on every run instead proves the fleet is
+  *consistently configured*, not just individually working.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ site_title }}</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 3rem auto; max-width: 40rem; line-height: 1.5; color: #1a1a1a; }
+    h1 { margin-bottom: 0.25rem; }
+    .meta { color: #555; font-size: 0.95rem; }
+    .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; background: #e6f4ea; color: #1a7f37; font-size: 0.85rem; font-weight: 600; }
+    dl { display: grid; grid-template-columns: 10rem 1fr; row-gap: 0.4rem; margin-top: 1.5rem; }
+    dt { font-weight: 600; color: #333; }
+    dd { margin: 0; color: #444; }
+  </style>
+</head>
+<body>
+  <h1>{{ site_title }}</h1>
+  <p class="meta">
+    <span class="badge">managed by ansible</span>
+    &nbsp;this page was templated identically across the fleet - only the
+    host identity below changes.
+  </p>
+  <p class="meta"><strong>Lab / demo environment only</strong> - served over plain HTTP for demonstration, not a production service.</p>
+
+  <dl>
+    <dt>Hostname</dt>
+    <dd>{{ ansible_hostname }}</dd>
+
+    <dt>Inventory name</dt>
+    <dd>{{ inventory_hostname }}</dd>
+
+    <dt>Connection</dt>
+    <dd>{{ ansible_connection }} (AWS Systems Manager Session Manager - no SSH)</dd>
+
+    <dt>Last configured</dt>
+    <dd>{{ ansible_date_time.iso8601 }}</dd>
+
+    <dt>OS</dt>
+    <dd>{{ ansible_distribution }} {{ ansible_distribution_version }}</dd>
+  </dl>
+</body>
+</html>

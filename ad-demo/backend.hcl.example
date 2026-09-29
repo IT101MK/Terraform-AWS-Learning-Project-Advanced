@@ -1,0 +1,26 @@
+# backend.hcl.example
+#
+# HOW TO USE THIS FILE (PowerShell):
+#   Copy-Item backend.hcl.example backend.hcl
+# ...then edit backend.hcl and fill in the SAME bucket name you used for the
+# root project (the output of "terraform output state_bucket_name" from
+# Project-IaC-Advanced\bootstrap\ - that config must be applied first, this
+# demo does not create its own state bucket). backend.hcl is gitignored -
+# it's specific to your AWS account, not something to commit.
+#
+# Then initialize with:
+#   terraform init -backend-config=backend.hcl
+#
+# Note the "key" below is deliberately different from the root project's
+# ("project-iac-advanced/terraform.tfstate"). Same bucket, different key -
+# that's enough for Terraform to keep the two states completely separate.
+# You can "terraform destroy" this config any time without touching, or
+# even needing, the root project's state.
+
+bucket = "tf-advanced-tfstate-xxxxxxxx" # <-- CHANGE ME (from bootstrap output, same value as the root project uses)
+key    = "project-iac-advanced/ad-demo/terraform.tfstate"
+region = "us-east-1"
+
+# Native S3 state locking (conditional-write lockfile, Terraform >= 1.10 -
+# see versions.tf). No DynamoDB table required.
+use_lockfile = true

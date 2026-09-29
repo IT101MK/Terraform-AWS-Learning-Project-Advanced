@@ -1,0 +1,28 @@
+# telemetry-upload.timer
+#
+# A systemd timer, not a cron entry, drives the schedule here on purpose:
+# timers are natively managed by `systemctl`/`journalctl` alongside every
+# other service on the box (status, logs, and enable/disable all go
+# through the same tooling an OT/sysadmin audit would already be
+# checking), whereas a cron job is a separate subsystem with its own log
+# location and its own enable/disable mechanism. One consistent way to
+# inspect "what's scheduled on this host" is worth more than cron's
+# slightly simpler syntax.
+[Unit]
+Description=Run telemetry-upload.service every {{ telemetry_interval_minutes }} minutes
+
+[Timer]
+# OnBootSec catches the case where the instance was off/rebooting right
+# as a scheduled run would have fired - guarantees telemetry starts
+# flowing shortly after boot instead of waiting a full interval.
+OnBootSec=2min
+OnUnitActiveSec={{ telemetry_interval_minutes }}min
+# Spreads actual execution across a random window so a fleet of several
+# hosts (all provisioned near-simultaneously by Terraform, and therefore
+# all with near-identical timer phase) doesn't hammer the S3 bucket with
+# simultaneous PUTs every interval.
+RandomizedDelaySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,20 @@
+# terraform.tfvars.example
+#
+# HOW TO USE THIS FILE (PowerShell):
+#   Copy-Item terraform.tfvars.example terraform.tfvars
+# ...then edit terraform.tfvars and, at minimum, set directory_password.
+# terraform.tfvars is gitignored - never commit a real password.
+
+aws_region            = "us-east-1"
+project_name          = "tf-advanced-ad-demo"
+directory_name        = "corp.tfadvanced.internal"
+directory_short_name  = "CORP"
+directory_edition     = "Standard"
+
+# directory_password = "SetAStrongPasswordHere1!"
+# ^ Required, no default. Must meet AWS Managed Microsoft AD's complexity
+# rules: 8-64 characters, must NOT contain the word "admin", and must
+# include characters from at least 3 of: lowercase, uppercase, digits,
+# non-alphanumeric. Set it here (after uncommenting) or, better, export it
+# as an environment variable instead of writing it to disk at all:
+#   $env:TF_VAR_directory_password = "SetAStrongPasswordHere1!"

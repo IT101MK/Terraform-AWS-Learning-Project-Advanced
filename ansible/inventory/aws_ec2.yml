@@ -1,0 +1,70 @@
+# inventory/aws_ec2.yml
+#
+# Dynamic inventory: the fleet is whatever EC2 instances Terraform
+# currently has running, discovered live via the AWS API every run. There
+# is deliberately no static hosts file to keep in sync by hand - Terraform
+# is the single source of truth for which hosts exist, and Ansible just
+# asks AWS "what's out there right now" each time.
+#
+# Filename matters: it must end in aws_ec2.yml/.yaml AND the first line of
+# content must be `plugin: amazon.aws.aws_ec2` for Ansible to recognise
+# this as an inventory source rather than a plain var file.
+plugin: amazon.aws.aws_ec2
+
+# Restrict the API calls (and therefore the credentials needed) to a
+# single region rather than the plugin's default of "every region" - much
+# faster, and matches a fleet that Terraform deploys into one region at a
+# time. Override via environment if your Terraform run used a different
+# region than the default below.
+regions:
+  - "{{ lookup('env', 'AWS_DEFAULT_REGION') | default('us-east-1', true) }}"
+
+# Only ever manage instances that belong to THIS Terraform project and are
+# actually up. The Project tag comes from providers.tf's default_tags
+# block (applied to every resource automatically), not a per-resource
+# Name tag - so this filter stays correct no matter how host_count scales
+# between 1 and 5. Filtering out non-running instances avoids the plugin
+# wasting time (and erroring) trying to reach hosts that are
+# stopped/terminated/still launching.
+filters:
+  "tag:Project": terraform-advanced
+  instance-state-name: running
+
+# Prefer the human-readable Name tag Terraform sets per-host
+# (tf-advanced-host-01, -02, ...) so `ansible-inventory --graph` and
+# playbook output are legible; fall back to the instance ID for any
+# instance that somehow lacks a Name tag rather than failing outright.
+hostnames:
+  - tag:Name
+  - instance-id
+
+# Every discovered instance lands in a single "fleet" group. A fleet this
+# small (1-5 hosts, one role: nginx + telemetry) doesn't benefit from
+# splitting into per-role or per-AZ groups - keyed_groups would add
+# indirection without adding value here.
+groups:
+  fleet: true
+
+# compose builds per-host variables from data the aws_ec2 plugin ALREADY
+# has in hand while it's parsing (raw EC2 API attributes like instance_id,
+# tags, etc). It deliberately does NOT set ansible_connection,
+# ansible_aws_ssm_region, ansible_aws_ssm_bucket_name, etc even though
+# those are also aws_ssm requirements - those live in group_vars/all.yml
+# instead. Reason: compose expressions run during inventory PARSING,
+# before Ansible's group_vars/host_vars loader has run, so a compose
+# expression can't reliably reference a variable defined in
+# group_vars/all.yml (it would evaluate as undefined). group_vars is
+# merged in later, at play time, so it's the correct place for constants;
+# compose is reserved here for the one value that's genuinely per-host and
+# only the API response knows: the instance ID.
+#
+# NOTE on syntax: `compose` entries are raw Jinja2 *expressions* (no
+# surrounding "{{ }}" - the plugin wraps each entry for you), unlike the
+# `regions` value above which is a normal templated string.
+compose:
+  # aws_ssm has no concept of "connect by IP/DNS" - sessions are opened
+  # against an instance ID via the SSM API, so this is the one connection
+  # variable that MUST vary per host. `instance_id` is populated directly
+  # from the EC2 API response by the aws_ec2 plugin itself, so it's safe
+  # to reference here (no group_vars dependency, no extra lookup).
+  ansible_aws_ssm_instance_id: "instance_id"

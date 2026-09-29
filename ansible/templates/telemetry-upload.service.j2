@@ -1,0 +1,23 @@
+# telemetry-upload.service
+#
+# A systemd "oneshot" service, triggered by telemetry-upload.timer rather
+# than run directly - systemd services aren't runnable on a schedule by
+# themselves, they need a paired .timer unit to invoke them. Splitting
+# the two also means the service can be run on demand for testing
+# (`systemctl start telemetry-upload.service`) independent of its
+# schedule.
+[Unit]
+Description=Upload host telemetry snapshot to S3
+# Don't bother trying to run this before the network (and therefore S3)
+# is actually reachable - avoids a guaranteed-to-fail run right at boot.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ telemetry_script_path }}
+# No special user/group: this runs as root via systemd like any other
+# system service, which is fine here since the script only reads local
+# system stats and calls the AWS CLI - it never needs to modify anything
+# sensitive on the box, and root is what already owns the timer/service
+# units themselves in /etc/systemd/system.

@@ -1,0 +1,41 @@
+# terraform.tfvars.example
+#
+# HOW TO USE THIS FILE (PowerShell):
+#   Copy-Item terraform.tfvars.example terraform.tfvars
+# ...then edit terraform.tfvars with YOUR values. Terraform automatically
+# loads terraform.tfvars. It is git-ignored (see .gitignore) because it can
+# contain values personal to you, like your home IP or notification email.
+
+# OPTIONAL - all variables below have sensible defaults in variables.tf.
+# Uncomment and edit only what you want to change.
+
+# project_name = "tf-advanced"
+# aws_region   = "us-east-1"
+
+# OPTIONAL - your public IP + "/32", for SSH fallback access. SSM Session
+# Manager works without this. Find your IP at https://checkip.amazonaws.com
+# ssh_allowed_cidr = "203.0.113.25/32" # <-- CHANGE ME if you enable this
+
+# OPTIONAL - name of an existing EC2 key pair, required alongside
+# ssh_allowed_cidr if you want to actually SSH in (rather than use SSM).
+# key_pair_name = "tf-advanced-key"
+
+# OPTIONAL - fleet size. Each extra host adds ~$0.005/hr in public IPv4
+# charges (see variables.tf). Must be between 1 and 5.
+# host_count = 2
+
+# OPTIONAL - root_volume_gb * host_count must stay <= 30 to remain fully
+# inside the account-wide 30 GB EBS free-tier ceiling.
+# root_volume_gb = 8
+
+# OPTIONAL - free-tier eligibility varies by account/region - verify on
+# your own account's Free Tier page before assuming t3.micro is free.
+# instance_type = "t3.micro"
+
+# OPTIONAL - CPU percentage that triggers the per-host high-CPU alarm.
+# cpu_alarm_threshold = 80
+
+# OPTIONAL - set true (and fill in alarm_email) to get emailed when an
+# alarm fires. Leave false to have alarms exist without notifying anyone.
+# enable_alarm_notifications = true
+# alarm_email                = "you@example.com" # <-- CHANGE ME if enabled

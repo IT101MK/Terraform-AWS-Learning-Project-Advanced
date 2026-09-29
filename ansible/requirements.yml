@@ -1,0 +1,33 @@
+# requirements.yml
+#
+# Ansible Galaxy collections this project depends on. Install with:
+#   ansible-galaxy collection install -r requirements.yml
+#
+# Version floors below track what's needed for a modern, actively
+# maintained aws_ssm connection plugin and aws_ec2 inventory plugin;
+# ceilings are left loose (next major only) so routine patch/minor
+# updates don't require editing this file.
+
+collections:
+  # Provides the aws_ec2 inventory plugin and the aws_ssm connection
+  # plugin - the two pieces this whole layer is built around. >=9.0.0
+  # because that's the line where the collection settled on the
+  # boto3/botocore-only (no more optional awscli dependency) SDK
+  # approach this project assumes.
+  - name: amazon.aws
+    version: ">=9.0.0,<12.0.0"
+
+  # Not strictly required by the playbook today, but declared because
+  # amazon.aws and community.aws are versioned/released together and
+  # portfolio reviewers will expect the pair; also gives headroom if the
+  # playbook grows to use community.aws-only modules later.
+  - name: community.aws
+    version: ">=9.0.0,<12.0.0"
+
+  # Not currently used by playbook.yml (all baseline-hardening tasks today
+  # are ansible.builtin: lineinfile, stat, systemd) - declared for the
+  # same reason as community.aws above, and as headroom for
+  # firewalld/sysctl-style hardening tasks if this project's baseline
+  # grows to need them.
+  - name: ansible.posix
+    version: ">=1.5.0,<2.0.0"

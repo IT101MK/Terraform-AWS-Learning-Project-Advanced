@@ -1,0 +1,77 @@
+#!/bin/bash
+#
+# telemetry-upload.sh
+#
+# Templated by Ansible (values like the bucket name and region are baked
+# in at deploy time, from group_vars/all.yml - they don't change host to
+# host, so there's no need to look them up again at runtime). Everything
+# else in this script - hostname, timestamp, uptime, disk, memory - is
+# read fresh from the instance itself each time the systemd timer below
+# fires.
+#
+# Framed in the project write-up as a stand-in for pulling periodic
+# readings off a remote/field asset (e.g. a substation RTU) into a
+# central data store: small, self-contained, scheduled payloads landing
+# in one S3 "data library" bucket rather than being scraped by a human.
+#
+# set -euo pipefail: fail loudly and immediately rather than silently
+# uploading a half-built or garbage JSON payload - a telemetry pipeline
+# that reports bad data without erroring is worse than one that just
+# skips a cycle.
+set -euo pipefail
+
+# Baked in at template time - see group_vars/all.yml.
+BUCKET="{{ s3_bucket_name }}"
+PREFIX="{{ telemetry_s3_prefix }}"
+REGION="{{ ansible_aws_ssm_region }}"
+
+HOSTNAME_VAL="$(hostname)"
+# ISO-8601 UTC timestamp, also reused (with colons stripped) as the S3
+# object key suffix so keys sort chronologically and never collide
+# between runs on the same host.
+TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+KEY_TIMESTAMP="$(echo "${TIMESTAMP}" | tr -d ':')"
+
+# uptime -p gives a human-readable string ("up 3 hours, 12 minutes");
+# /proc/uptime's first field is the more precise seconds-since-boot value
+# used for the numeric field below, so the payload carries both a
+# machine-friendly number and a human-friendly string.
+UPTIME_SECONDS="$(cut -d. -f1 /proc/uptime)"
+UPTIME_PRETTY="$(uptime -p)"
+
+# Root filesystem usage as a plain percentage integer (no trailing '%'),
+# and free-memory percentage derived from `free`. Both are cheap, always-
+# available signals on any Amazon Linux instance without extra packages -
+# deliberately basic, since the point of this pipeline is demonstrating
+# the collect-and-ship mechanism, not building a full metrics agent.
+DISK_USED_PERCENT="$(df -P / | awk 'NR==2 {gsub("%","",$5); print $5}')"
+MEM_TOTAL_KB="$(awk '/MemTotal/ {print $2}' /proc/meminfo)"
+MEM_AVAILABLE_KB="$(awk '/MemAvailable/ {print $2}' /proc/meminfo)"
+MEM_USED_PERCENT="$(awk -v t="${MEM_TOTAL_KB}" -v a="${MEM_AVAILABLE_KB}" 'BEGIN { printf "%.1f", ((t-a)/t)*100 }')"
+
+# Written to a temp file first (rather than piped straight into `aws s3
+# cp`) so a failed upload leaves a readable artifact behind for
+# troubleshooting, and so the JSON is fully built - and therefore valid -
+# before anything touches the network.
+PAYLOAD_FILE="$(mktemp /tmp/telemetry-XXXXXX.json)"
+trap 'rm -f "${PAYLOAD_FILE}"' EXIT
+
+cat > "${PAYLOAD_FILE}" <<JSON
+{
+  "hostname": "${HOSTNAME_VAL}",
+  "timestamp": "${TIMESTAMP}",
+  "uptime_seconds": ${UPTIME_SECONDS},
+  "uptime_pretty": "${UPTIME_PRETTY}",
+  "disk_root_used_percent": ${DISK_USED_PERCENT},
+  "memory_used_percent": ${MEM_USED_PERCENT}
+}
+JSON
+
+# No AWS credentials on disk anywhere - the instance's IAM role (the
+# least-privilege S3 policy: ListBucket on the bucket, GetObject/PutObject
+# on its contents) is picked up automatically from instance metadata by
+# the AWS CLI. That's the same reason this whole layer connects over SSM
+# instead of SSH: no long-lived secrets stored on the box.
+aws s3 cp "${PAYLOAD_FILE}" \
+  "s3://${BUCKET}/${PREFIX}/${HOSTNAME_VAL}/${KEY_TIMESTAMP}.json" \
+  --region "${REGION}"

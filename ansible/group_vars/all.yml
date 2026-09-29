@@ -1,0 +1,98 @@
+# group_vars/all.yml
+#
+# Variables applied to every host in the inventory (the "all" group is an
+# implicit parent of "fleet"). Split into two halves: connection plumbing
+# the aws_ssm plugin requires, and this project's own application
+# variables (bucket name, telemetry interval, etc).
+#
+# WHY THESE LIVE HERE AND NOT IN inventory/aws_ec2.yml's compose SECTION:
+# compose expressions are evaluated while the aws_ec2 plugin is still
+# parsing the inventory - before group_vars/host_vars files get merged in.
+# Anything constant (same value for every host) belongs here instead,
+# where normal Jinja templating and env var lookups work exactly as
+# expected at play time. Only the truly per-host value (instance_id) is
+# set via compose, in inventory/aws_ec2.yml.
+
+# ---------------------------------------------------------------------
+# aws_ssm connection plugin - required/recommended settings
+# (researched against the amazon.aws.aws_ssm connection plugin docs)
+# ---------------------------------------------------------------------
+
+# There is no SSH anywhere in this layer: no key pair, no security group
+# rule for port 22, no known_hosts. Every task instead runs through an
+# AWS Systems Manager Session Manager channel, authenticated by the
+# instance's IAM role and your AWS CLI credentials/IAM permissions on the
+# control machine - nothing the instance itself has to expose on the
+# network. This is the deliberate security posture for an OT/critical-
+# infrastructure-flavoured fleet: fewer open ports and no long-lived SSH
+# key material to lose, rotate, or leak.
+ansible_connection: aws_ssm
+
+# The region the SSM API calls target. Kept in sync with the `regions`
+# filter in inventory/aws_ec2.yml (same env-var-or-default logic), since
+# the instance has to actually exist in the region you're asking SSM to
+# open a session in.
+ansible_aws_ssm_region: "{{ lookup('env', 'AWS_DEFAULT_REGION') | default('us-east-1', true) }}"
+
+# REQUIRED by the plugin even for tasks that don't look like file
+# transfers: every module Ansible runs (including the small Python files
+# that implement modules like `dnf` or `template`) is relayed to/from the
+# instance through this S3 bucket rather than a direct SSH-style stream.
+# There is no working aws_ssm connection without a bucket here.
+#
+# This is intentionally a placeholder, not a literal name: the Terraform
+# side generates the bucket name with a random suffix (see
+# bootstrap/main.tf's `random_id` pattern, reused for the data bucket) so
+# it's globally unique and unknown until after `terraform apply`. Fill
+# this in from the Terraform output before your first run, e.g.:
+#   terraform output -raw bucket_name
+# then either edit the line below or override on the command line:
+#   ansible-playbook playbook.yml -e s3_bucket_name=tf-advanced-data-a1b2c3d4
+s3_bucket_name: "CHANGE_ME-set-from-terraform-output"
+
+# Used directly by both the aws_ssm connection plugin (as
+# ansible_aws_ssm_bucket_name below) and the telemetry upload script
+# templated later in this project - one variable, two consumers, so the
+# bucket only has to be entered once.
+ansible_aws_ssm_bucket_name: "{{ s3_bucket_name }}"
+
+# Recommended in the plugin's own docs: leave bucket versioning off (this
+# is set on the Terraform side) since every file relayed through the
+# bucket - including this project's telemetry JSON and any ad-hoc file
+# transfers - passes through in plain form, and there's no reason to keep
+# indefinite historical copies of transient transfer objects.
+
+# A cold SSM Agent on a freshly-booted instance can take a couple of
+# attempts before the session actually establishes; nudged up from the
+# plugin's own default of 3 so a first-run-after-boot doesn't spuriously
+# fail. ansible_aws_ssm_timeout is left at the collection default (60s).
+ansible_aws_ssm_retries: 4
+
+# ---------------------------------------------------------------------
+# Project application variables
+# ---------------------------------------------------------------------
+
+# How often the telemetry-upload systemd timer fires, in minutes. Framed
+# in the accompanying write-up as analogous to periodically pulling
+# substation/field-device readings into a centralised data historian -
+# here, "readings" are basic host health metrics and the "historian" is
+# the S3 bucket. 15 minutes balances freshness against S3 PUT volume for
+# a demo fleet; tune per-host with a host_vars override if needed.
+telemetry_interval_minutes: 15
+
+# Prefix inside the bucket that telemetry objects are written under, kept
+# separate from any path the aws_ssm connection plugin itself uses for
+# file-transfer scratch objects (those live under a per-instance-ID
+# prefix the plugin manages itself, so there's no collision either way).
+telemetry_s3_prefix: telemetry
+
+# Where the rendered upload script lives on each host. /usr/local/sbin is
+# the conventional home for locally-managed (i.e. not package-managed)
+# admin scripts on this kind of system, and is already on root's PATH.
+telemetry_script_path: /usr/local/sbin/telemetry-upload.sh
+
+# nginx status page title, purely cosmetic - templated identically onto
+# every host (see templates/index.html.j2) to demonstrate configuration
+# consistency, in contrast with Terraform's user_data which only ever ran
+# once at boot.
+site_title: "Project IaC Advanced - Fleet Status"
