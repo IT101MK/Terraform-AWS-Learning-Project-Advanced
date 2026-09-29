@@ -1,5 +1,9 @@
 # Terraform + AWS Advanced Project
 
+**Licence:** [MIT](LICENSE.md) — free to use, modify, and distribute, including
+commercially. Provided as-is, without warranty; the author accepts no liability
+for any AWS charges, data loss, or other costs you incur using it.
+
 > [!WARNING]
 > **Lab / learning project only — not production-ready.** Everything here is built for short-lived lab testing in a personal AWS account and torn down at the end of each session. Several choices are deliberately simplified for learning and cost, and are **not** safe defaults to copy into a real environment. In particular:
 > - The hosts sit in a **public subnet** and serve a demo page over **plain HTTP (port 80, no TLS) to the whole internet**.
