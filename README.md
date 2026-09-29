@@ -12,7 +12,7 @@ for any AWS charges, data loss, or other costs you incur using it.
 >
 > Use it to learn from, and review and harden it before reusing any part of it. See [What to learn next](#what-to-learn-next) for what a production version would change.
 
-A staged, multi-host AWS environment built with Terraform, Ansible, and PowerShell — the advanced companion to the `Project-IaC` learning project. Where that project builds one server, this one builds and operates a small **fleet**: multiple EC2 hosts behind a reusable Terraform module, CloudWatch monitoring, Ansible configuration management over SSM (no SSH keys), a periodic telemetry-to-S3 pipeline, and a locally-run PowerShell health-report script. A separate, isolated component briefly stands up a real AWS Managed Microsoft AD directory for a portfolio screenshot.
+A staged, multi-host AWS environment built with Terraform, Ansible, and PowerShell — the advanced companion to the [`Terraform-AWS-Learning-Project`](https://github.com/IT101MK/Terraform-AWS-Learning-Project) learning project. Where that project builds one server, this one builds and operates a small **fleet**: multiple EC2 hosts behind a reusable Terraform module, CloudWatch monitoring, Ansible configuration management over SSM (no SSH keys), a periodic telemetry-to-S3 pipeline, and a locally-run PowerShell health-report script. A separate, isolated component briefly stands up a real AWS Managed Microsoft AD directory for a portfolio screenshot.
 
 The telemetry pipeline (Stage 4) is deliberately modelled on a common OT/industrial pattern: small, scheduled payloads captured from remote assets and shipped into one centralised, lifecycle-managed data store — here, host health metrics standing in for field-device readings, and an S3 bucket standing in for a data historian.
 
@@ -58,7 +58,7 @@ Stages 1 and 2 live in the **same root Terraform configuration** and are built b
 
 ## Prerequisites
 
-Everything from the base `Project-IaC` project's prerequisites (AWS account, IAM user, budget alert, AWS CLI, Terraform), plus:
+Everything from the base [`Terraform-AWS-Learning-Project`](https://github.com/IT101MK/Terraform-AWS-Learning-Project) project's prerequisites (AWS account, IAM user, budget alert, AWS CLI, Terraform), plus:
 
 | Requirement | Why | Install |
 |---|---|---|
