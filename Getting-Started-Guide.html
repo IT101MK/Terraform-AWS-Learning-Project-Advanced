@@ -393,7 +393,7 @@ cp /mnt/c/Users/&lt;you&gt;/.aws/credentials /mnt/c/Users/&lt;you&gt;/.aws/confi
   </table>
   </div>
   <figure>
-  <img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172128.png" alt="EC2 instance type picker showing pricing across 1354 instance types">
+  <img src="guide-assets/screenshots-clean/ec2-instance-types.png" alt="EC2 instance type picker showing pricing across 1354 instance types">
   <figcaption>EC2 → Instance Types — 1,354 options, most of them wildly wrong for a two-host portfolio fleet. <code>t3.micro</code> is the deliberate, boring choice out of this whole list.</figcaption>
   </figure>
   <div class="callout danger">
@@ -501,7 +501,7 @@ terraform apply</code></pre>
 
 <div class="card">
 <figure>
-<img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172059.png" alt="EC2 console instance list showing two running t3.micro hosts with status checks 3/3 passed">
+<img src="guide-assets/screenshots-clean/ec2-instances-running.png" alt="EC2 console instance list showing two running t3.micro hosts with status checks 3/3 passed">
 <figcaption>EC2 → Instances, right after <code>terraform apply</code> — both hosts <code>Running</code>, status checks <code>3/3 passed</code>.</figcaption>
 </figure>
 </div>
@@ -523,11 +523,11 @@ terraform apply</code></pre>
 
 <div class="card">
 <figure>
-<img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172336.png" alt="CloudWatch dashboard tf-advanced-fleet showing CPU and status check graphs for both hosts">
+<img src="guide-assets/screenshots-clean/cloudwatch-fleet-dashboard.png" alt="CloudWatch dashboard tf-advanced-fleet showing CPU and status check graphs for both hosts">
 <figcaption>CloudWatch → Dashboards → <code>tf-advanced-fleet</code> — one dashboard, two panels (CPU + status check) per host, built entirely by <code>monitoring.tf</code>.</figcaption>
 </figure>
 <figure>
-<img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172448.png" alt="CloudWatch alarms overview showing four alarms, all OK, zero in alarm state">
+<img src="guide-assets/screenshots-clean/cloudwatch-alarms-overview.png" alt="CloudWatch alarms overview showing four alarms, all OK, zero in alarm state">
 <figcaption>CloudWatch → Overview — 4 alarms (2 per host: status-check + CPU), all <code>OK</code>.</figcaption>
 </figure>
 </div>
@@ -560,7 +560,7 @@ ansible-playbook playbook.yml --tags baseline</code></pre>
 
 <div class="card">
 <figure>
-<img src="guide-assets/screenshots-clean/Screenshot 2026-08-20 172236.png" alt="Browser showing the nginx-served fleet status page, templated identically across the fleet">
+<img src="guide-assets/screenshots-clean/fleet-status-page.png" alt="Browser showing the nginx-served fleet status page, templated identically across the fleet">
 <figcaption>The fleet status page the <code>baseline</code> tag's <code>template</code> task deploys — identical on every host except the identity block. The browser address bar has been replaced with a documentation-range IP (<code>203.0.113.10</code>). Plain HTTP on port 80 like this is for lab verification only.</figcaption>
 </figure>
 </div>

@@ -81,6 +81,9 @@ This account is on AWS's post-July-2025 **credit-based Free Plan**, not the clas
 | CloudWatch alarms | 2 per host. The Always-Free ceiling is 10/account. `host_count` is capped at 5 by validation (5 × 2 = 10 — exactly the ceiling), so this project alone can't push you over it. If you have *other* alarms already in the account, the combined total can still exceed 10 even at `host_count ≤ 5`. |
 | AWS Managed Microsoft AD (`ad-demo/`) | See the dedicated warning further down — this is the expensive one. |
 
+![EC2 instance type picker showing pricing across 1,354 instance types](guide-assets/screenshots-clean/ec2-instance-types.png)
+*EC2 → Instance Types — 1,354 options, most of them wildly wrong for a two-host portfolio fleet. `t3.micro` is the deliberate, boring choice out of this whole list.*
+
 **Same discipline as the base project: destroy everything except the Stage 0 bootstrap at the end of every session.**
 
 ```powershell
@@ -149,6 +152,9 @@ terraform plan    # with the default host_count = 2, expect: Plan: 21 to add (St
 terraform apply
 ```
 
+![EC2 console instance list showing two running t3.micro hosts with status checks 3/3 passed](guide-assets/screenshots-clean/ec2-instances-running.png)
+*EC2 → Instances, right after `terraform apply` — both hosts `Running`, status checks `3/3 passed`. Account details and public IPs are redacted (IPs swapped for the `203.0.113.0/24` documentation range).*
+
 Once applied, each host serves a small status page at `http://<public-ip>/`. **This is for lab verification only:** it's plain HTTP open to the internet, and the page deliberately shows nothing beyond the host key and hostname. Destroy the fleet at the end of the session rather than leaving it reachable.
 
 ## Stage 2 — SSM + CloudWatch monitoring
@@ -165,6 +171,12 @@ aws ssm start-session --target <instance-id>   # works with no key pair and no o
 - A **CPUUtilization** alarm, threshold set by `cpu_alarm_threshold` (default 80%).
 
 Both feed a single **CloudWatch dashboard** covering the whole fleet (`terraform output dashboard_url`). Alarm notifications are off by default — alarms exist and show up in the console either way, they just don't page anyone unless you set `enable_alarm_notifications = true` and an `alarm_email` (you'll need to confirm the SNS subscription email AWS sends you).
+
+![CloudWatch dashboard tf-advanced-fleet showing CPU and status check graphs for both hosts](guide-assets/screenshots-clean/cloudwatch-fleet-dashboard.png)
+*CloudWatch → Dashboards → `tf-advanced-fleet` — one dashboard, two panels (CPU + status check) per host, built entirely by `monitoring.tf`.*
+
+![CloudWatch alarms overview showing four alarms, all OK, zero in alarm state](guide-assets/screenshots-clean/cloudwatch-alarms-overview.png)
+*CloudWatch → Overview — 4 alarms (2 per host: status-check + CPU), all `OK`.*
 
 Because Stage 2 lives in the same root config as Stage 1, this is already applied by the `terraform apply` above — there's nothing additional to run. With the default `host_count = 2` and notifications off, the full plan (network + storage + IAM + hosts + monitoring) is **21 resources**.
 
@@ -189,6 +201,9 @@ ansible-playbook playbook.yml --tags baseline    # patching, nginx, light SSH ha
 ```
 
 The `baseline` tag: refreshes and fully updates dnf packages, installs `dnf-automatic` for unattended patching between playbook runs (applies updates, never auto-reboots — an unannounced reboot is exactly what an OT-flavoured environment wants to avoid), (re)installs nginx and deploys a fleet status page identically to every host via the `template` module, disables SSH password authentication as defense-in-depth (this fleet doesn't use SSH, but if a security group is ever loosened to allow port 22, a brute-forceable password login shouldn't be the reason it matters), and confirms the SSM Agent service is active.
+
+![Browser showing the nginx-served fleet status page, templated identically across the fleet](guide-assets/screenshots-clean/fleet-status-page.png)
+*The fleet status page the `baseline` tag's `template` task deploys — identical on every host except the identity block. The address bar shows a documentation-range IP (`203.0.113.10`), not the real one. Plain HTTP on port 80 like this is for lab verification only.*
 
 ## Stage 4 — S3 telemetry/backup pipeline
 
